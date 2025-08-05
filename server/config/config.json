@@ -1,0 +1,26 @@
+{
+  "development": {
+    "dialect": "sqlite",
+    "storage": "./database.sqlite",
+    "define": {
+      "timestamps": false,
+      "underscored": true
+    }
+  },
+  "test": {
+    "dialect": "sqlite",
+    "storage": ":memory:",
+    "define": {
+      "timestamps": false,
+      "underscored": true
+    }
+  },
+  "production": {
+    "dialect": "sqlite",
+    "storage": "./database.sqlite",
+    "define": {
+      "timestamps": false,
+      "underscored": true
+    }
+  }
+} 

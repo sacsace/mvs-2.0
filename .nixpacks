@@ -1,0 +1,14 @@
+[phases.setup]
+nixPkgs = ['nodejs', 'npm']
+
+[phases.install]
+cmds = ['npm install']
+
+[phases.build]
+cmds = ['npm run build']
+
+[phases.postBuild]
+cmds = ['npm run migrate']
+
+[start]
+cmd = 'npm start' 

@@ -1,0 +1,354 @@
+import { Router, Request, Response, NextFunction } from 'express';
+import User from '../models/User';
+import Company from '../models/Company';
+import logger from '../utils/logger';
+import jwt from 'jsonwebtoken';
+import config from '../config';
+
+const router = Router();
+
+// 시스템 초기화 상태 확인 (모듈화)
+router.get('/check-initialization', async (req: Request, res: Response) => {
+  try {
+    // Sequelize 모델을 사용하여 올바른 테이블명으로 조회
+    const userCount = await User.count({ where: { is_deleted: false } });
+    const companyCount = await Company.count({ where: { is_deleted: false } });
+    const isInitialized = userCount > 0 || companyCount > 0;
+    res.json({
+      success: true,
+      data: { isInitialized, userCount, companyCount }
+    });
+  } catch (error) {
+    logger.error('Error checking initialization status:', error);
+    res.status(500).json({
+      success: false,
+      message: '시스템 초기화 상태 확인 중 오류가 발생했습니다.'
+    });
+  }
+});
+
+// JWT 인증 미들웨어
+function authMiddleware(req: Request & { user?: any }, res: Response, next: NextFunction) {
+  const authHeader = req.headers['authorization'];
+  if (!authHeader) return res.status(401).json({ success: false, message: 'No token provided' });
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, config.jwt.secret);
+    req.user = decoded;
+    next();
+  } catch (err) {
+    return res.status(401).json({ success: false, message: 'Invalid token' });
+  }
+}
+
+// 현재 로그인한 사용자 정보 반환
+router.get('/me', authMiddleware, async (req: Request & { user?: any }, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'No user info in request' });
+    }
+    const user = await User.findByPk(req.user.id, {
+      attributes: ['id', 'userid', 'username', 'company_id', 'role', 'create_date', 'update_date']
+    });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    res.json({ success: true, user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to fetch user info' });
+  }
+});
+
+router.get('/', authMiddleware, async (req: Request & { user?: any }, res: Response) => {
+  logger.info('GET /api/users called');
+  try {
+    const currentUser = req.user;
+    logger.info(`Current user: ${currentUser?.userid}, role: ${currentUser?.role}, company_id: ${currentUser?.company_id}`);
+
+    let whereCondition: any = { is_deleted: false };
+
+    // 권한에 따른 필터링
+    if (currentUser?.role === 'root') {
+      // root는 모든 사용자 조회 가능
+      logger.info('Root user - showing all users');
+    } else if (currentUser?.role === 'admin' || currentUser?.role === 'audit') {
+      // admin과 audit는 같은 회사 사용자만 조회 가능
+      whereCondition.company_id = currentUser.company_id;
+      logger.info(`${currentUser.role} user - showing users from company_id: ${currentUser.company_id}`);
+    } else {
+      // regular 사용자는 사용자 목록 조회 불가
+      return res.status(403).json({ error: '사용자 목록을 조회할 권한이 없습니다.' });
+    }
+
+    const users = await User.findAll({
+      where: whereCondition,
+      attributes: ['id', 'userid', 'username', 'role', 'company_id', 'default_language', 'create_date', 'update_date'],
+      include: [{
+        model: Company,
+        as: 'company',
+        attributes: ['name']
+      }],
+      order: [['create_date', 'DESC']]
+    });
+    logger.info(`Found ${users.length} users for user ${currentUser?.userid}`);
+    res.json(users);
+  } catch (error) {
+    logger.error('Error fetching users:', error);
+    res.status(500).json({ error: '사용자 목록 조회 중 오류가 발생했습니다.' });
+  }
+});
+
+// 사용자 추가
+router.post('/', authMiddleware, async (req: Request & { user?: any }, res: Response) => {
+  try {
+    const { userid, username, password, role, company_id, default_language } = req.body;
+    
+    const currentUser = req.user;
+    
+    // 권한 검사
+    if (currentUser?.role !== 'root' && currentUser?.role !== 'admin' && currentUser?.role !== 'audit') {
+      return res.status(403).json({ error: '사용자를 추가할 권한이 없습니다.' });
+    }
+
+    // 필수 필드 검증
+    if (!userid || !username || !password || !role || !company_id) {
+      return res.status(400).json({ error: '모든 필수 필드를 입력해주세요.' });
+    }
+
+    // admin과 audit는 같은 회사에만 사용자 추가 가능
+    if ((currentUser?.role === 'admin' || currentUser?.role === 'audit') && currentUser?.company_id !== company_id) {
+      return res.status(403).json({ error: '다른 회사에 사용자를 추가할 권한이 없습니다.' });
+    }
+
+    // 사용자 ID 중복 검사
+    const existingUser = await User.findOne({ where: { userid, is_deleted: false } });
+    if (existingUser) {
+      return res.status(400).json({ error: '이미 존재하는 사용자 ID입니다.' });
+    }
+
+    // 역할 권한 검증
+    if (currentUser?.role === 'admin') {
+      // 관리자는 일반 사용자만 추가 가능
+      if (role !== 'user') {
+        return res.status(403).json({ error: '관리자는 일반 사용자 역할만 부여할 수 있습니다.' });
+      }
+    } else if (currentUser?.role === 'audit') {
+      // 감사자는 일반 사용자만 추가 가능
+      if (role !== 'user') {
+        return res.status(403).json({ error: '감사자는 일반 사용자 역할만 부여할 수 있습니다.' });
+      }
+    } else if (currentUser?.role === 'root') {
+      // root는 모든 역할 추가 가능 (자신 제외)
+      if (role === 'root') {
+        return res.status(403).json({ error: 'root 사용자는 다른 root 사용자를 추가할 수 없습니다.' });
+      }
+    }
+
+    // 비밀번호 해싱
+    const bcrypt = require('bcrypt');
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // 사용자 생성
+    const user = await User.create({
+      userid,
+      username,
+      password: hashedPassword,
+      role,
+      company_id,
+      default_language: default_language || 'ko', // 기본값은 한국어
+      create_date: new Date(),
+      update_date: new Date()
+    });
+
+    // 사용자 생성 시 메뉴 권한은 부여하지 않음
+    // 메뉴 권한은 관리자가 별도로 설정해야 함
+
+    logger.info(`User created: ${userid}`);
+    res.status(201).json({ success: true, user: { id: user.id, userid: user.userid, username: user.username, role: user.role } });
+  } catch (error) {
+    logger.error('Error creating user:', error);
+    res.status(500).json({ error: '사용자 생성 중 오류가 발생했습니다.' });
+  }
+});
+
+// 사용자 수정
+router.put('/:id', authMiddleware, async (req: Request & { user?: any }, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { userid, username, role, company_id, password } = req.body;
+    const currentUser = req.user;
+    
+    console.log('=== 서버 사용자 수정 요청 로그 ===');
+    console.log('현재 사용자:', currentUser?.userid, '역할:', currentUser?.role);
+    console.log('수정할 사용자 ID:', id);
+    console.log('요청 본문:', req.body);
+    console.log('비밀번호 포함 여부:', !!password);
+    console.log('비밀번호 값:', password);
+    console.log('비밀번호 길이:', password?.length);
+    console.log('===============================');
+    
+    // 권한 검사
+    if (currentUser?.role !== 'root' && currentUser?.role !== 'admin' && currentUser?.role !== 'audit') {
+      return res.status(403).json({ error: '사용자를 수정할 권한이 없습니다.' });
+    }
+    
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+    }
+
+    // admin과 audit는 같은 회사 사용자만 수정 가능
+    if ((currentUser?.role === 'admin' || currentUser?.role === 'audit') && currentUser?.company_id !== user.company_id) {
+      return res.status(403).json({ error: '다른 회사 사용자를 수정할 권한이 없습니다.' });
+    }
+
+    // 사용자 ID 중복 검사 (자신 제외)
+    if (userid !== user.userid) {
+      const existingUser = await User.findOne({ where: { userid, is_deleted: false } });
+      if (existingUser) {
+        return res.status(400).json({ error: '이미 존재하는 사용자 ID입니다.' });
+      }
+    }
+
+    // 역할 권한 검증
+    if (currentUser?.role === 'admin') {
+      // 관리자는 일반 사용자로만 변경 가능
+      if (role !== 'user') {
+        return res.status(403).json({ error: '관리자는 일반 사용자 역할만 부여할 수 있습니다.' });
+      }
+    } else if (currentUser?.role === 'audit') {
+      // 감사자는 일반 사용자로만 변경 가능
+      if (role !== 'user') {
+        return res.status(403).json({ error: '감사자는 일반 사용자 역할만 부여할 수 있습니다.' });
+      }
+    } else if (currentUser?.role === 'root') {
+      // root는 모든 역할로 변경 가능 (자신 제외)
+      if (role === 'root' && currentUser.id !== parseInt(id)) {
+        return res.status(403).json({ error: 'root 사용자는 다른 root 사용자로 변경할 수 없습니다.' });
+      }
+    }
+
+    // 업데이트할 데이터 준비
+    const updateData: any = {
+      userid,
+      username,
+      role,
+      company_id,
+      default_language: req.body.default_language || user.default_language,
+      update_date: new Date()
+    };
+
+    // 비밀번호가 제공된 경우 해싱하여 업데이트
+    if (password && password.trim() !== '') {
+      console.log('비밀번호 업데이트 수행');
+      const bcrypt = require('bcrypt');
+      const hashedPassword = await bcrypt.hash(password, 10);
+      updateData.password = hashedPassword;
+      console.log('비밀번호 해싱 완료');
+    } else {
+      console.log('비밀번호 업데이트 없음');
+    }
+
+    console.log('업데이트할 데이터:', updateData);
+
+    // 사용자 정보 업데이트
+    await user.update(updateData);
+
+    logger.info(`User updated: ${userid}`);
+    res.json({ success: true, user: { id: user.id, userid: user.userid, username: user.username, role: user.role } });
+  } catch (error) {
+    logger.error('Error updating user:', error);
+    res.status(500).json({ error: '사용자 수정 중 오류가 발생했습니다.' });
+  }
+});
+
+// 사용자 삭제 (소프트 삭제)
+router.delete('/:id', authMiddleware, async (req: Request & { user?: any }, res: Response) => {
+  try {
+    const { id } = req.params;
+    const currentUser = req.user;
+    
+    // 권한 검사
+    if (currentUser?.role !== 'root' && currentUser?.role !== 'admin') {
+      return res.status(403).json({ error: '사용자를 삭제할 권한이 없습니다.' });
+    }
+    
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+    }
+
+    // admin은 같은 회사 사용자만 삭제 가능
+    if (currentUser?.role === 'admin' && currentUser?.company_id !== user.company_id) {
+      return res.status(403).json({ error: '다른 회사 사용자를 삭제할 권한이 없습니다.' });
+    }
+
+    // root 사용자는 삭제 불가
+    if (user.role === 'root') {
+      return res.status(400).json({ error: '최고관리자는 삭제할 수 없습니다.' });
+    }
+
+    // 소프트 삭제
+    await user.update({
+      is_deleted: true,
+      update_date: new Date()
+    });
+
+    logger.info(`User deleted: ${user.username}`);
+    res.json({ success: true, message: '사용자가 삭제되었습니다.' });
+  } catch (error) {
+    logger.error('Error deleting user:', error);
+    res.status(500).json({ error: '사용자 삭제 중 오류가 발생했습니다.' });
+  }
+});
+
+// 사용자 비밀번호 존재 여부 확인
+router.get('/:id/has-password', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const user = await User.findByPk(id, {
+      attributes: ['id', 'password'] // 비밀번호 해시만 조회
+    });
+    
+    if (!user) {
+      return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+    }
+
+    // 비밀번호가 설정되어 있는지 확인 (해시가 null이 아니고 빈 문자열이 아닌 경우)
+    const hasPassword = user.password && user.password.trim() !== '';
+    
+    res.json({ 
+      success: true, 
+      hasPassword 
+    });
+  } catch (error) {
+    logger.error('Error checking password existence:', error);
+    res.status(500).json({ error: '비밀번호 확인 중 오류가 발생했습니다.' });
+  }
+});
+
+// 사용자 비밀번호 존재 여부 확인
+router.get('/:id/has-password', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+    }
+
+    // 비밀번호가 설정되어 있는지 확인 (빈 문자열이 아닌지)
+    const hasPassword = user.password && user.password.trim() !== '';
+    
+    res.json({ 
+      success: true, 
+      hasPassword 
+    });
+  } catch (error) {
+    logger.error('Error checking user password:', error);
+    res.status(500).json({ error: '비밀번호 확인 중 오류가 발생했습니다.' });
+  }
+});
+
+export default router; 

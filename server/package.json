@@ -1,0 +1,51 @@
+{
+  "name": "mvs-backend",
+  "version": "1.0.0",
+  "description": "MVS 2.0 Backend",
+  "main": "src/index.ts",
+  "private": true,
+  "scripts": {
+    "start": "ts-node src/index.ts",
+    "dev": "nodemon src/index.ts",
+    "build": "tsc",
+    "migrate": "sequelize-cli db:migrate",
+    "migrate:undo": "sequelize-cli db:migrate:undo",
+    "seed": "sequelize-cli db:seed:all",
+    "check-config": "ts-node src/scripts/checkConfig.ts",
+    "check-db": "ts-node src/scripts/checkDatabase.ts",
+    "init-db": "ts-node src/scripts/initializeDatabase.ts"
+  },
+  "dependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/multer": "^2.0.0",
+    "@types/react": "^19.1.3",
+    "@types/react-dom": "^19.1.3",
+    "@types/winston": "^2.4.4",
+    "axios": "^1.11.0",
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.2",
+    "pg": "^8.10.0",
+    "pg-hstore": "^2.3.4",
+    "sequelize": "^6.31.0",
+    "sqlite3": "^5.1.7",
+    "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/bcryptjs": "^2.4.2",
+    "@types/cors": "^2.8.13",
+    "@types/express": "^4.17.17",
+    "@types/jsonwebtoken": "^9.0.9",
+    "@types/node": "^18.15.11",
+    "@types/pg": "^8.6.6",
+    "nodemon": "^2.0.22",
+    "sequelize-cli": "^6.6.3",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.4"
+  }
+}
