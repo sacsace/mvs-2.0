@@ -13,7 +13,8 @@
     "install:all": "npm install && cd server && npm install && cd ../client && npm install",
     "migrate": "cd server && npm run migrate",
     "migrate:undo": "cd server && npm run migrate:undo",
-    "init-db": "cd server && npm run init-db"
+    "init-db": "cd server && npm run init-db",
+    "postbuild": "npm run migrate"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
