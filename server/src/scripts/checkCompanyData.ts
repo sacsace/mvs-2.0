@@ -18,8 +18,8 @@ async function checkCompanyData() {
     companies.forEach(company => {
       console.log(JSON.stringify({
         회사ID: company.company_id,
-        회사명: company.company_name,
-        회사코드: company.company_code,
+        회사명: company.name,
+        회사코드: company.coi,
         주소: company.address,
         전화번호: company.phone,
         이메일: company.email,

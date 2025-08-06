@@ -1,7 +1,7 @@
-'use strict';
+import { QueryInterface, Sequelize } from 'sequelize';
 
 module.exports = {
-  up: async (queryInterface, Sequelize) => {
+  up: async (queryInterface: QueryInterface, Sequelize: any) => {
     // approval 테이블 생성
     await queryInterface.createTable('approval', {
       id: {
@@ -135,7 +135,7 @@ module.exports = {
     await queryInterface.addIndex('approval_file', ['approval_id']);
   },
 
-  down: async (queryInterface, Sequelize) => {
+  down: async (queryInterface: QueryInterface, Sequelize: any) => {
     await queryInterface.dropTable('approval_file');
     await queryInterface.dropTable('approval');
   },
