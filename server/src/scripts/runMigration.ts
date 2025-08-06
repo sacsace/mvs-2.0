@@ -1,47 +1,58 @@
-import { QueryInterface, DataTypes } from 'sequelize';
-import sequelize from '../config/database';
+import { Sequelize } from 'sequelize';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
 
 async function runMigration() {
+  console.log('=== Migration Script Started ===');
+  
+  // 환경변수 확인
+  console.log('Environment Variables:');
+  console.log('NODE_ENV:', process.env.NODE_ENV);
+  console.log('DATABASE_URL exists:', !!process.env.DATABASE_URL);
+  
+  if (process.env.DATABASE_URL) {
+    console.log('DATABASE_URL length:', process.env.DATABASE_URL.length);
+    // 보안을 위해 URL의 일부만 출력
+    const url = process.env.DATABASE_URL;
+    const maskedUrl = url.replace(/:([^@]+)@/, ':****@');
+    console.log('DATABASE_URL (masked):', maskedUrl);
+  }
+  
   try {
-    console.log('다국어 지원 마이그레이션 시작...');
-
-    // 메뉴 테이블에 영문명 필드 추가
-    console.log('메뉴 테이블에 name_en 필드 추가 중...');
-    await sequelize.query(`
-      ALTER TABLE menu ADD COLUMN name_en VARCHAR(50);
-    `);
-
-    // 사용자 테이블에 기본 언어 필드 추가
-    console.log('사용자 테이블에 default_language 필드 추가 중...');
-    await sequelize.query(`
-      ALTER TABLE user ADD COLUMN default_language VARCHAR(10) NOT NULL DEFAULT 'ko';
-    `);
-
-    // 기존 메뉴 데이터에 영문명 추가 (한글명을 기본값으로)
-    console.log('기존 메뉴 데이터에 영문명 설정 중...');
-    await sequelize.query(`
-      UPDATE menu SET name_en = name WHERE name_en IS NULL;
-    `);
-
-    // 기존 사용자 데이터에 기본 언어 설정
-    console.log('기존 사용자 데이터에 기본 언어 설정 중...');
-    await sequelize.query(`
-      UPDATE user SET default_language = 'ko' WHERE default_language IS NULL;
-    `);
-
-    console.log('다국어 지원 마이그레이션 완료!');
+    // Sequelize 연결 테스트
+    if (process.env.DATABASE_URL) {
+      const sequelize = new Sequelize(process.env.DATABASE_URL, {
+        dialect: 'postgres',
+        dialectOptions: {
+          ssl: {
+            require: true,
+            rejectUnauthorized: false
+          }
+        },
+        logging: console.log
+      });
+      
+      console.log('Testing database connection...');
+      await sequelize.authenticate();
+      console.log('Database connection successful!');
+      await sequelize.close();
+    }
     
-    // 결과 확인
-    const menuCount = await sequelize.query('SELECT COUNT(*) as count FROM menu') as any;
-    const userCount = await sequelize.query('SELECT COUNT(*) as count FROM user') as any;
+    // 마이그레이션 실행
+    console.log('Running migrations...');
+    const { stdout, stderr } = await execAsync('npx sequelize-cli db:migrate', {
+      env: { ...process.env, NODE_ENV: 'production' }
+    });
     
-    console.log(`메뉴 개수: ${menuCount[0][0].count}`);
-    console.log(`사용자 개수: ${userCount[0][0].count}`);
-
+    if (stdout) console.log('Migration output:', stdout);
+    if (stderr) console.log('Migration errors:', stderr);
+    
+    console.log('=== Migration completed ===');
   } catch (error) {
-    console.error('마이그레이션 오류:', error);
-  } finally {
-    await sequelize.close();
+    console.error('Migration failed:', error);
+    process.exit(1);
   }
 }
 

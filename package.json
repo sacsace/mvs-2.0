@@ -14,7 +14,7 @@
     "migrate": "cd server && npm run migrate",
     "migrate:undo": "cd server && npm run migrate:undo",
     "init-db": "cd server && npm run init-db",
-    "postbuild": "npm run migrate"
+    "postbuild": "cd server && npm run migrate:debug"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
