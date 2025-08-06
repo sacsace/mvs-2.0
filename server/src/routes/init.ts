@@ -101,6 +101,7 @@ router.post('/', async (req, res) => {
         description_en: role.description_en,
         level: role.level,
         company_access: role.company_access,
+        is_active: true,
       }));
       await Role.bulkCreate(roleRows, { transaction });
       logger.info('Roles created successfully', { count: roleRows.length });
