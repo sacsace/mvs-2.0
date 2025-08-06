@@ -41,7 +41,7 @@ if (process.env.NODE_ENV === 'production') {
 // Database connection
 sequelize.authenticate()
   .then(() => {
-    logger.info('Model associations setup completed.');
+    logger.info('Database connection established successfully.');
   })
   .catch((error) => {
     logger.error('Database connection failed:', error);
@@ -79,4 +79,6 @@ const PORT = parseInt(process.env.PORT || config.server.port.toString() || '3001
 
 app.listen(PORT, '0.0.0.0', () => {
   logger.info(`Server is running on port ${PORT}`);
+  logger.info(`Health check available at: http://localhost:${PORT}/api/init/health`);
+  logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
 }); 
