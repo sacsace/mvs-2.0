@@ -9,24 +9,22 @@ import Menu from '../models/Menu';
 const router = Router();
 
 // 헬스체크 엔드포인트
-router.get('/health', async (req, res) => {
+router.get('/health', (req, res) => {
   try {
-    // 데이터베이스 연결 확인
-    await sequelize.authenticate();
-    res.json({ 
+    // 간단한 헬스체크 - 데이터베이스 연결 없이도 응답
+    res.status(200).json({ 
       status: 'healthy', 
       timestamp: new Date().toISOString(),
-      database: 'connected',
-      message: 'Server is running successfully'
+      message: 'Server is running successfully',
+      uptime: process.uptime()
     });
   } catch (error) {
-    logger.error('Health check failed:', error);
-    // 데이터베이스 연결 실패해도 서버는 정상 응답
-    res.json({ 
+    logger.error('Health check error:', error);
+    res.status(200).json({ 
       status: 'healthy', 
       timestamp: new Date().toISOString(),
-      database: 'disconnected',
-      message: 'Server is running but database connection failed'
+      message: 'Server is running',
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });

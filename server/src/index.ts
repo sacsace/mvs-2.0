@@ -19,6 +19,17 @@ import invoiceRouter from './routes/invoice';
 import partnerRouter from './routes/partners';
 import logger from './utils/logger';
 
+// 프로세스 에러 핸들링
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught Exception:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
 const app = express();
 
 // CORS 설정
@@ -38,13 +49,14 @@ if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../../client/build')));
 }
 
-// Database connection
+// Database connection (non-blocking)
 sequelize.authenticate()
   .then(() => {
-    logger.info('Database connection established successfully.');
+    logger.info('✅ Database connection established successfully.');
   })
   .catch((error) => {
-    logger.error('Database connection failed:', error);
+    logger.error('⚠️  Database connection failed:', error);
+    logger.info('Continuing without database connection...');
   });
 
 // 라우터 등록
@@ -77,8 +89,16 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 const PORT = parseInt(process.env.PORT || config.server.port.toString() || '3001');
 
+// 서버 시작 전 로그
+logger.info(`Starting server on port ${PORT}`);
+logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+logger.info(`Database URL exists: ${!!process.env.DATABASE_URL}`);
+
 app.listen(PORT, '0.0.0.0', () => {
-  logger.info(`Server is running on port ${PORT}`);
-  logger.info(`Health check available at: http://localhost:${PORT}/api/init/health`);
-  logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  logger.info(`✅ Server is running on port ${PORT}`);
+  logger.info(`✅ Health check available at: http://localhost:${PORT}/api/init/health`);
+  logger.info(`✅ Server startup completed successfully`);
+}).on('error', (error) => {
+  logger.error(`❌ Server failed to start:`, error);
+  process.exit(1);
 }); 
