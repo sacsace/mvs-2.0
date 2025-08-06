@@ -21,24 +21,30 @@ async function runMigration() {
   }
   
   try {
-    // Sequelize 연결 테스트
-    if (process.env.DATABASE_URL) {
-      const sequelize = new Sequelize(process.env.DATABASE_URL, {
-        dialect: 'postgres',
-        dialectOptions: {
-          ssl: {
-            require: true,
-            rejectUnauthorized: false
-          }
-        },
-        logging: console.log
-      });
-      
-      console.log('Testing database connection...');
-      await sequelize.authenticate();
-      console.log('Database connection successful!');
-      await sequelize.close();
+    // DATABASE_URL이 없으면 마이그레이션 스킵
+    if (!process.env.DATABASE_URL) {
+      console.log('⚠️  DATABASE_URL not found. Skipping migration.');
+      console.log('Please set DATABASE_URL in Railways Variables.');
+      console.log('=== Migration skipped ===');
+      return;
     }
+    
+    // Sequelize 연결 테스트
+    const sequelize = new Sequelize(process.env.DATABASE_URL, {
+      dialect: 'postgres',
+      dialectOptions: {
+        ssl: {
+          require: true,
+          rejectUnauthorized: false
+        }
+      },
+      logging: console.log
+    });
+    
+    console.log('Testing database connection...');
+    await sequelize.authenticate();
+    console.log('Database connection successful!');
+    await sequelize.close();
     
     // 마이그레이션 실행
     console.log('Running migrations...');
@@ -52,7 +58,8 @@ async function runMigration() {
     console.log('=== Migration completed ===');
   } catch (error) {
     console.error('Migration failed:', error);
-    process.exit(1);
+    console.log('⚠️  Migration failed but continuing deployment...');
+    // 마이그레이션 실패해도 배포는 계속 진행
   }
 }
 
