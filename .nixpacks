@@ -11,4 +11,4 @@ cmds = ['npm run build']
 cmds = ['npm run migrate']
 
 [start]
-cmd = 'npm start' 
+cmd = 'cd server && node dist/index.js' 
