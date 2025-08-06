@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import Company from '../models/Company';
+import CompanyGst from '../models/CompanyGst';
 import User from '../models/User';
+import Role from '../models/Role';
+import Permission from '../models/Permission';
 import sequelize from '../config/database';
 import bcrypt from 'bcryptjs';
 import logger from '../utils/logger';
@@ -33,42 +36,97 @@ router.post('/', async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
-    const { company, admin, menus } = req.body;
-    logger.info('Initializing system with company, admin, and menu data', { 
+    const { company, admin, gstData, menus, roles, permissions } = req.body;
+    logger.info('Initializing system with comprehensive company, admin, and configuration data', { 
       companyName: company.name,
-      adminUsername: admin.username 
+      adminUsername: admin.username,
+      adminUserId: admin.userid 
     });
 
     // 1. 회사 정보 생성
     const newCompany = await Company.create({
       name: company.name,
-      coi: company.business_number, // 사업자등록번호를 coi로 사용
+      coi: company.business_number,
       representative_name: company.representative_name,
       address: company.address,
       phone: company.phone,
       email: company.email,
+      website: company.website,
+      pan: company.pan,
+      iec: company.iec,
+      msme: company.msme,
+      bank_name: company.bank_name,
+      account_holder: company.account_holder,
+      account_number: company.account_number,
+      ifsc_code: company.ifsc_code,
+      partner_type: company.partner_type,
+      product_category: company.product_category,
+      login_period_start: company.login_period_start,
+      login_period_end: company.login_period_end,
     }, { transaction });
 
     logger.info('Company created successfully', { companyId: newCompany.company_id });
 
-    // 2. 관리자 계정 생성
+    // 2. GST 정보 생성
+    if (Array.isArray(gstData) && gstData.length > 0) {
+      const gstRows = gstData.map((gst: any) => ({
+        company_id: newCompany.company_id,
+        gst_number: gst.gst_number,
+        address: gst.address,
+        is_primary: gst.is_primary,
+      }));
+      await CompanyGst.bulkCreate(gstRows, { transaction });
+      logger.info('GST data created successfully', { count: gstRows.length });
+    }
+
+    // 3. 관리자 계정 생성
     const hashedPassword = await bcrypt.hash(admin.password, 10);
     const newUser = await User.create({
+      userid: admin.userid,
       username: admin.username,
       password: hashedPassword,
       company_id: newCompany.company_id,
       role: 'admin',
+      default_language: admin.default_language || 'ko',
     }, { transaction });
 
     logger.info('Admin user created successfully', { userId: newUser.id });
 
-    // 3. 메뉴 데이터 저장
+    // 4. 역할 데이터 저장
+    if (Array.isArray(roles) && roles.length > 0) {
+      const roleRows = roles.map((role: any) => ({
+        name: role.name,
+        name_en: role.name_en,
+        description: role.description,
+        description_en: role.description_en,
+        level: role.level,
+        company_access: role.company_access,
+      }));
+      await Role.bulkCreate(roleRows, { transaction });
+      logger.info('Roles created successfully', { count: roleRows.length });
+    }
+
+    // 5. 권한 데이터 저장
+    if (Array.isArray(permissions) && permissions.length > 0) {
+      const permissionRows = permissions.map((permission: any) => ({
+        name: permission.name,
+        description: permission.description,
+        level: permission.level,
+        company_access: permission.company_access,
+      }));
+      await Permission.bulkCreate(permissionRows, { transaction });
+      logger.info('Permissions created successfully', { count: permissionRows.length });
+    }
+
+    // 6. 메뉴 데이터 저장
     if (Array.isArray(menus) && menus.length > 0) {
       const menuRows = menus.map((menu: any) => ({
         name: menu.name,
+        name_en: menu.name_en || menu.name,
         icon: menu.icon,
         order_num: menu.order,
         parent_id: menu.parent_id,
+        url: menu.url || null,
         create_date: new Date(),
       }));
       await Menu.bulkCreate(menuRows, { transaction });
@@ -76,8 +134,22 @@ router.post('/', async (req, res) => {
     }
 
     await transaction.commit();
-    logger.info('System initialization completed successfully');
-    res.json({ success: true, message: '시스템이 성공적으로 초기화되었습니다.' });
+    logger.info('System initialization completed successfully with all components');
+    res.json({ 
+      success: true, 
+      message: '시스템이 성공적으로 초기화되었습니다.',
+      data: {
+        company: {
+          id: newCompany.company_id,
+          name: newCompany.name
+        },
+        admin: {
+          id: newUser.id,
+          userid: newUser.userid,
+          username: newUser.username
+        }
+      }
+    });
   } catch (error) {
     await transaction.rollback();
     logger.error('Initialization error:', { 
