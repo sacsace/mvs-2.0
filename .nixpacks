@@ -11,4 +11,7 @@ cmds = ['npm run build']
 cmds = ['npm run migrate']
 
 [start]
-cmd = 'npm start' 
+cmd = 'npm start'
+
+[variables]
+NODE_ENV = 'production' 
