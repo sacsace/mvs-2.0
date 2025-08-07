@@ -5,8 +5,8 @@ async function assignAllMenuPermissionsToRoot() {
     await sequelize.authenticate();
     console.log('Database connection established.');
 
-    // root 사용자 ID 조회
-    const [rootUsers] = await sequelize.query('SELECT id FROM user WHERE username = ?', {
+    // root 사용자 ID 조회 (userid 필드 사용)
+    const [rootUsers] = await sequelize.query('SELECT id FROM user WHERE userid = ?', {
       replacements: ['root']
     });
 

@@ -453,9 +453,19 @@ router.get('/', authenticateJWT, async (req, res) => {
       });
     }
 
-    // 권한이 있는 메뉴만 조회
-    const menuIds = menuPermissions.map(mp => mp.menu_id);
-    console.log(`권한이 있는 메뉴 ID:`, menuIds);
+    // 읽기 권한이 있는 메뉴만 조회
+    const readableMenuPermissions = menuPermissions.filter(mp => mp.can_read === 1);
+    const menuIds = readableMenuPermissions.map(mp => mp.menu_id);
+    console.log(`읽기 권한이 있는 메뉴 ID:`, menuIds);
+
+    // 읽기 권한이 있는 메뉴가 없는 경우 빈 메뉴 목록 반환
+    if (menuIds.length === 0) {
+      console.log(`사용자 ${userId}에게 읽기 권한이 있는 메뉴가 없음. 빈 메뉴 목록 반환`);
+      return res.json({
+        success: true,
+        data: []
+      });
+    }
 
     // 메뉴 정보 조회
     const menus = await Menu.findAll({
