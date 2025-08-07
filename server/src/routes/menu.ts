@@ -454,7 +454,7 @@ router.get('/', authenticateJWT, async (req, res) => {
     }
 
     // 읽기 권한이 있는 메뉴만 조회
-    const readableMenuPermissions = menuPermissions.filter(mp => mp.can_read === 1);
+    const readableMenuPermissions = menuPermissions.filter(mp => Boolean(mp.can_read));
     const menuIds = readableMenuPermissions.map(mp => mp.menu_id);
     console.log(`읽기 권한이 있는 메뉴 ID:`, menuIds);
 
