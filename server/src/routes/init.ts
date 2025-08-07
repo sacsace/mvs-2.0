@@ -43,6 +43,18 @@ router.post('/', async (req, res) => {
       adminUserId: admin.userid 
     });
 
+    // 기존 사용자 존재 여부 확인
+    const existingUsers = await User.count({ where: { is_deleted: false } });
+    if (existingUsers > 0) {
+      await transaction.rollback();
+      logger.warn('Initialization attempted but users already exist', { userCount: existingUsers });
+      return res.status(400).json({
+        success: false,
+        message: '이미 사용자가 존재합니다. 시스템이 이미 초기화되었습니다.',
+        error: 'ALREADY_INITIALIZED'
+      });
+    }
+
     // 1. 회사 정보 생성
     const newCompany = await Company.create({
       name: company.name,

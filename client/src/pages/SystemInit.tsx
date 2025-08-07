@@ -86,7 +86,15 @@ const SystemInit: React.FC = () => {
     }
 
     try {
-      // 기본 초기화 API 호출 - InitPage의 구조와 맞춤
+      // 1. 사용자 존재 여부 확인
+      const hasUserRes = await axios.get('/api/init/has-user');
+      if (hasUserRes.data.hasUser) {
+        setError('시스템이 이미 초기화되었습니다. 로그인 페이지로 이동합니다.');
+        setTimeout(() => navigate('/login'), 2000);
+        return;
+      }
+
+      // 2. 기본 초기화 API 호출 - InitPage의 구조와 맞춤
       const response = await axios.post('/api/init', {
         company: {
           name: formData.companyName,
@@ -138,9 +146,17 @@ const SystemInit: React.FC = () => {
       if (response.data.success) {
         navigate('/login');
       }
-    } catch (error) {
-      setError('초기화 중 오류가 발생했습니다. 다시 시도해주세요.');
+    } catch (error: any) {
       console.error('Initialization error:', error);
+      
+      if (error.response?.status === 400 && error.response?.data?.error === 'ALREADY_INITIALIZED') {
+        setError('시스템이 이미 초기화되었습니다. 로그인 페이지로 이동합니다.');
+        setTimeout(() => navigate('/login'), 2000);
+      } else if (error.response?.data?.message) {
+        setError(error.response.data.message);
+      } else {
+        setError('초기화 중 오류가 발생했습니다. 다시 시도해주세요.');
+      }
     } finally {
       setLoading(false);
     }
