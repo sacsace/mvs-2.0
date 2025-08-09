@@ -4,9 +4,9 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "cd server && node dist/index.js",
+    "startCommand": "cd server && npm run update-menus && node dist/index.js",
     "healthcheckPath": "/api/init/health",
-    "healthcheckTimeout": 100,
+    "healthcheckTimeout": 120,
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
   }

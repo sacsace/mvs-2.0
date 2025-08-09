@@ -15,7 +15,9 @@
     "seed": "sequelize-cli db:seed:all",
     "check-config": "ts-node src/scripts/checkConfig.ts",
     "check-db": "ts-node src/scripts/checkDatabase.ts",
-    "init-db": "ts-node src/scripts/initializeDatabase.ts"
+    "init-db": "ts-node src/scripts/initializeDatabase.ts",
+    "update-menus": "ts-node src/scripts/updateProductionMenus.ts",
+    "postbuild": "npm run update-menus"
   },
   "dependencies": {
     "@types/jest": "^29.5.14",
