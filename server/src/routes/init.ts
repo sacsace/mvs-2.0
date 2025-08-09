@@ -106,59 +106,77 @@ router.post('/', async (req, res) => {
 
     // 4. 역할 데이터 저장
     if (Array.isArray(roles) && roles.length > 0) {
-      const roleRows = roles.map((role: any) => ({
-        name: role.name,
-        name_en: role.name_en,
-        description: role.description,
-        description_en: role.description_en,
-        level: role.level,
-        company_access: role.company_access,
-        is_active: true,
-      }));
-      await Role.bulkCreate(roleRows, { transaction });
-      logger.info('Roles created successfully', { count: roleRows.length });
+      const existingRoles = await Role.count({ transaction });
+      
+      if (existingRoles === 0) {
+        const roleRows = roles.map((role: any) => ({
+          name: role.name,
+          name_en: role.name_en,
+          description: role.description,
+          description_en: role.description_en,
+          level: role.level,
+          company_access: role.company_access,
+          is_active: true,
+        }));
+        await Role.bulkCreate(roleRows, { transaction });
+        logger.info('Roles created successfully', { count: roleRows.length });
+      } else {
+        logger.info('Roles already exist, skipping creation', { count: existingRoles });
+      }
     }
 
     // 5. 권한 데이터 저장
     if (Array.isArray(permissions) && permissions.length > 0) {
-      const permissionRows = permissions.map((permission: any) => ({
-        name: permission.name,
-        description: permission.description,
-        level: permission.level,
-        company_access: permission.company_access,
-      }));
-      await Permission.bulkCreate(permissionRows, { transaction });
-      logger.info('Permissions created successfully', { count: permissionRows.length });
+      const existingPermissions = await Permission.count({ transaction });
+      
+      if (existingPermissions === 0) {
+        const permissionRows = permissions.map((permission: any) => ({
+          name: permission.name,
+          description: permission.description,
+          level: permission.level,
+          company_access: permission.company_access,
+        }));
+        await Permission.bulkCreate(permissionRows, { transaction });
+        logger.info('Permissions created successfully', { count: permissionRows.length });
+      } else {
+        logger.info('Permissions already exist, skipping creation', { count: existingPermissions });
+      }
     }
 
     // 6. 메뉴 데이터 저장
     if (Array.isArray(menus) && menus.length > 0) {
-      logger.info('Creating menus sequentially for proper parent-child relationships');
+      const existingMenus = await Menu.count({ transaction });
       
-      // 임시 ID -> 실제 menu_id 매핑
-      const menuIdMapping: { [key: number]: number } = {};
-      
-      // 순차적으로 메뉴 생성 (부모 메뉴 먼저 생성)
-      for (const menu of menus) {
-        const realParentId = menu.parent_id ? menuIdMapping[menu.parent_id] : null;
+      if (existingMenus === 0) {
+        logger.info('Creating menus sequentially for proper parent-child relationships');
         
-        const createdMenu = await Menu.create({
-          name: menu.name,
-          name_en: menu.name_en || menu.name,
-          icon: menu.icon,
-          order_num: menu.order || menu.order_num,
-          parent_id: realParentId,
-          url: menu.url || null,
-          create_date: new Date(),
-        }, { transaction });
+        // 임시 ID -> 실제 menu_id 매핑
+        const menuIdMapping: { [key: number]: number } = {};
         
-        // 임시 ID와 실제 ID 매핑 저장
-        menuIdMapping[menu.id] = createdMenu.menu_id;
+        // 순차적으로 메뉴 생성 (부모 메뉴 먼저 생성)
+        for (const menu of menus) {
+          const realParentId = menu.parent_id ? menuIdMapping[menu.parent_id] : null;
+          
+          const createdMenu = await Menu.create({
+            name: menu.name,
+            name_en: menu.name_en || menu.name,
+            icon: menu.icon,
+            order_num: menu.order || menu.order_num,
+            parent_id: realParentId,
+            url: menu.url || null,
+            create_date: new Date(),
+          }, { transaction });
+          
+          // 임시 ID와 실제 ID 매핑 저장
+          menuIdMapping[menu.id] = createdMenu.menu_id;
+          
+          logger.info(`Menu created: ${menu.name} (ID: ${createdMenu.menu_id})`);
+        }
         
-        logger.info(`Menu created: ${menu.name} (ID: ${createdMenu.menu_id})`);
+        logger.info('Menus created successfully', { count: menus.length });
+      } else {
+        logger.info('Menus already exist, skipping creation', { count: existingMenus });
       }
-      
-      logger.info('Menus created successfully', { count: menus.length });
     }
 
     await transaction.commit();
