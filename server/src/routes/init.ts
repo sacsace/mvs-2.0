@@ -133,17 +133,32 @@ router.post('/', async (req, res) => {
 
     // 6. 메뉴 데이터 저장
     if (Array.isArray(menus) && menus.length > 0) {
-      const menuRows = menus.map((menu: any) => ({
-        name: menu.name,
-        name_en: menu.name_en || menu.name,
-        icon: menu.icon,
-        order_num: menu.order,
-        parent_id: menu.parent_id,
-        url: menu.url || null,
-        create_date: new Date(),
-      }));
-      await Menu.bulkCreate(menuRows, { transaction });
-      logger.info('Menus created successfully', { count: menuRows.length });
+      logger.info('Creating menus sequentially for proper parent-child relationships');
+      
+      // 임시 ID -> 실제 menu_id 매핑
+      const menuIdMapping: { [key: number]: number } = {};
+      
+      // 순차적으로 메뉴 생성 (부모 메뉴 먼저 생성)
+      for (const menu of menus) {
+        const realParentId = menu.parent_id ? menuIdMapping[menu.parent_id] : null;
+        
+        const createdMenu = await Menu.create({
+          name: menu.name,
+          name_en: menu.name_en || menu.name,
+          icon: menu.icon,
+          order_num: menu.order || menu.order_num,
+          parent_id: realParentId,
+          url: menu.url || null,
+          create_date: new Date(),
+        }, { transaction });
+        
+        // 임시 ID와 실제 ID 매핑 저장
+        menuIdMapping[menu.id] = createdMenu.menu_id;
+        
+        logger.info(`Menu created: ${menu.name} (ID: ${createdMenu.menu_id})`);
+      }
+      
+      logger.info('Menus created successfully', { count: menus.length });
     }
 
     await transaction.commit();
