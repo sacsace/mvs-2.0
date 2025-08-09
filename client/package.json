@@ -28,7 +28,6 @@
     "react-scripts": "5.0.1",
     "typescript": "^5.4.5"
   },
-  "proxy": "http://localhost:3001",
   "browserslist": {
     "production": [
       ">0.2%",

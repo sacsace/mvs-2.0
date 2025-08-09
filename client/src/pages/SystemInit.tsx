@@ -114,14 +114,30 @@ const SystemInit: React.FC = () => {
         },
         gstData: [], // 빈 배열로 시작
         menus: [
-          { id: 1, name: '대시보드', icon: 'dashboard', order: 1, parent_id: null },
-          { id: 2, name: '사용자 관리', icon: 'people', order: 2, parent_id: null },
-          { id: 3, name: '회사 관리', icon: 'business', order: 3, parent_id: null },
-          { id: 4, name: '파트너 관리', icon: 'handshake', order: 4, parent_id: null },
-          { id: 5, name: '인보이스 관리', icon: 'receipt', order: 5, parent_id: null },
-          { id: 6, name: '회계 통계', icon: 'analytics', order: 6, parent_id: null },
-          { id: 7, name: '승인 관리', icon: 'approval', order: 7, parent_id: null },
-          { id: 8, name: '메뉴 권한 관리', icon: 'security', order: 8, parent_id: null }
+          // 메인 카테고리
+          { id: 1, name: '대시보드', name_en: 'Dashboard', icon: 'dashboard', order: 1, parent_id: null, url: '/dashboard' },
+          { id: 2, name: '사용자 관리', name_en: 'User Management', icon: 'people', order: 2, parent_id: null, url: null },
+          { id: 3, name: '권한 관리', name_en: 'Permission Management', icon: 'security', order: 3, parent_id: null, url: null },
+          { id: 4, name: '업무 관리', name_en: 'Business Management', icon: 'work', order: 4, parent_id: null, url: null },
+          { id: 5, name: '회계 관리', name_en: 'Accounting Management', icon: 'account_balance', order: 5, parent_id: null, url: null },
+          
+          // 사용자 관리 하위 메뉴
+          { id: 21, name: '사용자 목록', name_en: 'User List', icon: 'list', order: 1, parent_id: 2, url: '/users/list' },
+          { id: 22, name: '회사 정보 관리', name_en: 'Company Management', icon: 'business', order: 2, parent_id: 2, url: '/users/company' },
+          { id: 23, name: '파트너 업체 관리', name_en: 'Partner Management', icon: 'handshake', order: 3, parent_id: 2, url: '/users/partners' },
+          
+          // 권한 관리 하위 메뉴
+          { id: 31, name: '메뉴 권한 관리', name_en: 'Menu Permission', icon: 'menu_book', order: 1, parent_id: 3, url: '/permissions/menu' },
+          { id: 32, name: '사용자 권한 관리', name_en: 'User Permission', icon: 'person_add', order: 2, parent_id: 3, url: '/permissions/user' },
+          { id: 33, name: '역할 관리', name_en: 'Role Management', icon: 'admin_panel_settings', order: 3, parent_id: 3, url: '/permissions/roles' },
+          { id: 34, name: '권한 설정', name_en: 'Permission Settings', icon: 'settings', order: 4, parent_id: 3, url: '/permissions/manage' },
+          
+          // 업무 관리 하위 메뉴
+          { id: 41, name: '전자결재', name_en: 'Electronic Approval', icon: 'approval', order: 1, parent_id: 4, url: '/approval' },
+          
+          // 회계 관리 하위 메뉴
+          { id: 51, name: '매출 관리', name_en: 'Sales Management', icon: 'receipt', order: 1, parent_id: 5, url: '/accounting/invoices' },
+          { id: 52, name: '매입/매출 통계', name_en: 'Purchase/Sales Statistics', icon: 'analytics', order: 2, parent_id: 5, url: '/accounting/statistics' }
         ],
         roles: [
           {
