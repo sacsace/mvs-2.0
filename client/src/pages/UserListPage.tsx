@@ -186,6 +186,8 @@ const UserListPage: React.FC = () => {
     console.log('=== 사용자 추가 시작 ===');
     console.log('현재 사용자 정보:', currentUser);
     console.log('현재 사용자 역할:', currentUser?.role);
+    console.log('현재 사용자 역할 타입:', typeof currentUser?.role);
+    console.log('root와 비교:', currentUser?.role === 'root', currentUser?.role, 'root');
     
     setEditingUser(null);
     
@@ -778,8 +780,33 @@ const UserListPage: React.FC = () => {
                 {/* 현재 사용자 권한에 따라 선택 가능한 역할 제한 */}
                 {(() => {
                   console.log('=== 역할 선택 옵션 렌더링 ===');
+                  console.log('현재 사용자:', currentUser);
                   console.log('현재 사용자 역할:', currentUser?.role);
+                  console.log('editingUser:', editingUser ? '수정 모드' : '추가 모드');
                   
+                  // currentUser가 없는 경우 기본 옵션만 표시
+                  if (!currentUser) {
+                    console.log('현재 사용자 정보 없음, 기본 옵션 표시');
+                    return (
+                      <>
+                        <MenuItem value="user" sx={{ fontSize: '0.75rem' }}>User</MenuItem>
+                      </>
+                    );
+                  }
+                  
+                  // 임시: 모든 옵션 표시하여 문제 확인
+                  console.log('임시: 모든 역할 옵션 표시');
+                  return (
+                    <>
+                      <MenuItem value="root" sx={{ fontSize: '0.75rem' }}>System Administrator</MenuItem>
+                      <MenuItem value="admin" sx={{ fontSize: '0.75rem' }}>Administrator</MenuItem>
+                      <MenuItem value="audit" sx={{ fontSize: '0.75rem' }}>Auditor</MenuItem>
+                      <MenuItem value="user" sx={{ fontSize: '0.75rem' }}>User</MenuItem>
+                    </>
+                  );
+                  
+                  // 원래 로직 (주석 처리)
+                  /*
                   if (currentUser?.role === 'root') {
                     console.log('root 사용자 옵션 렌더링');
                     return (
@@ -815,6 +842,7 @@ const UserListPage: React.FC = () => {
                       </>
                     );
                   }
+                  */
                 })()}
                 {/* root는 자신과 같은 역할도 추가 가능하므로 별도 처리하지 않음 */}
               </Select>
