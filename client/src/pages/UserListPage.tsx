@@ -731,6 +731,15 @@ const UserListPage: React.FC = () => {
               <Select
                 value={formData.role}
                 label={t('role')}
+                renderValue={(value) => {
+                  switch (value) {
+                    case 'root': return 'System Administrator';
+                    case 'admin': return 'Administrator';
+                    case 'audit': return 'Auditor';
+                    case 'user': return 'User';
+                    default: return value;
+                  }
+                }}
                 onChange={(e) => {
                   console.log('=== 역할 선택 변경 ===');
                   console.log('선택된 역할:', e.target.value);
@@ -774,31 +783,34 @@ const UserListPage: React.FC = () => {
                     console.log('root 사용자 옵션 렌더링');
                     return (
                       <>
-                        <MenuItem value="user" sx={{ fontSize: '0.75rem' }}>{t('regular')}</MenuItem>
-                        <MenuItem value="admin" sx={{ fontSize: '0.75rem' }}>{t('admin')}</MenuItem>
-                        <MenuItem value="audit" sx={{ fontSize: '0.75rem' }}>{t('audit')}</MenuItem>
+                        <MenuItem value="root" sx={{ fontSize: '0.75rem' }}>System Administrator</MenuItem>
+                        <MenuItem value="admin" sx={{ fontSize: '0.75rem' }}>Administrator</MenuItem>
+                        <MenuItem value="audit" sx={{ fontSize: '0.75rem' }}>Auditor</MenuItem>
+                        <MenuItem value="user" sx={{ fontSize: '0.75rem' }}>User</MenuItem>
                       </>
                     );
                   } else if (currentUser?.role === 'admin') {
                     console.log('admin 사용자 옵션 렌더링');
                     return (
                       <>
-                        <MenuItem value="user" sx={{ fontSize: '0.75rem' }}>{t('regular')}</MenuItem>
+                        <MenuItem value="admin" sx={{ fontSize: '0.75rem' }}>Administrator</MenuItem>
+                        <MenuItem value="user" sx={{ fontSize: '0.75rem' }}>User</MenuItem>
                       </>
                     );
                   } else if (currentUser?.role === 'audit') {
                     console.log('audit 사용자 옵션 렌더링');
                     return (
                       <>
-                        <MenuItem value="user" sx={{ fontSize: '0.75rem' }}>{t('regular')}</MenuItem>
-                        <MenuItem value="admin" sx={{ fontSize: '0.75rem' }}>{t('admin')}</MenuItem>
+                        <MenuItem value="audit" sx={{ fontSize: '0.75rem' }}>Auditor</MenuItem>
+                        <MenuItem value="admin" sx={{ fontSize: '0.75rem' }}>Administrator</MenuItem>
+                        <MenuItem value="user" sx={{ fontSize: '0.75rem' }}>User</MenuItem>
                       </>
                     );
                   } else {
                     console.log('알 수 없는 역할, 기본 옵션 렌더링');
                     return (
                       <>
-                        <MenuItem value="user" sx={{ fontSize: '0.75rem' }}>{t('regular')}</MenuItem>
+                        <MenuItem value="user" sx={{ fontSize: '0.75rem' }}>User</MenuItem>
                       </>
                     );
                   }
