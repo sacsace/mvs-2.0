@@ -164,9 +164,9 @@ const SystemInit: React.FC = () => {
       if (response.data.success) {
         setError('');
         setSuccess(true);
-        // 2초 후 로그인 페이지로 자동 이동
+        // 2초 후 페이지 새로고침 (자동으로 로그인 페이지로 리다이렉트됨)
         setTimeout(() => {
-          navigate('/login');
+          window.location.reload();
         }, 2000);
       }
     } catch (error: any) {
@@ -423,7 +423,7 @@ const SystemInit: React.FC = () => {
           {success && (
             <Alert severity="success" sx={{ mt: 2 }}>
               <AlertTitle>초기화 완료!</AlertTitle>
-              시스템 초기화가 성공적으로 완료되었습니다. 잠시 후 로그인 페이지로 이동합니다...
+              시스템 초기화가 성공적으로 완료되었습니다. 잠시 후 페이지가 새로고침됩니다...
             </Alert>
           )}
 
