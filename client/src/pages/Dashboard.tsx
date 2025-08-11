@@ -400,12 +400,21 @@ const Dashboard: React.FC = () => {
   // 회사명에서 "private limited" 제거하는 함수
   const getDisplayCompanyName = (companyName: string): string => {
     if (!companyName) return 'MSV';
-    return companyName
+    
+    console.log('=== getDisplayCompanyName 호출 ===');
+    console.log('원본 회사명:', companyName);
+    
+    const result = companyName
       .replace(/\s*private\s*limi?te?d\s*/gi, '')  // Private Limited, Private Limtied 등 철자 오류 포함
       .replace(/\s*pvt\.?\s*ltd?\.?\s*/gi, '')     // Pvt Ltd, Pvt. Ltd., Pvt Lt 등
       .replace(/\s*limi?te?d\s*/gi, '')           // Limited, Limtied, Limted 등 철자 오류 포함
       .replace(/\s*ltd?\.?\s*/gi, '')             // Ltd, Ltd., Lt 등
       .trim();
+    
+    console.log('처리된 회사명:', result);
+    console.log('=== getDisplayCompanyName 완료 ===');
+    
+    return result;
   };
 
   const getIcon = (iconName: string) => {
