@@ -128,6 +128,12 @@ const InvoicePage: React.FC = () => {
     invoice_type: 'regular' as 'regular' | 'e-invoice' | 'lotus' | 'proforma',
     invoice_date: new Date().toISOString().split('T')[0],
     partner_company_id: 1,
+    customer_input_type: 'existing' as 'existing' | 'manual', // 고객 입력 방식
+    manual_customer: {
+      name: '',
+      address: '',
+      gst: ''
+    },
     service_items: [
       {
         description: '',
@@ -365,6 +371,12 @@ const InvoicePage: React.FC = () => {
         invoice_type: 'regular' as 'regular' | 'e-invoice' | 'lotus' | 'proforma',
         invoice_date: new Date().toISOString().split('T')[0],
         partner_company_id: defaultCompanyId,
+        customer_input_type: 'existing' as 'existing' | 'manual',
+        manual_customer: {
+          name: '',
+          address: '',
+          gst: ''
+        },
         service_items: [
           {
             description: '',
@@ -428,6 +440,12 @@ const InvoicePage: React.FC = () => {
         invoice_type: 'e-invoice' as 'regular' | 'e-invoice' | 'lotus' | 'proforma',
         invoice_date: new Date().toISOString().split('T')[0],
         partner_company_id: defaultCompanyId,
+        customer_input_type: 'existing' as 'existing' | 'manual',
+        manual_customer: {
+          name: '',
+          address: '',
+          gst: ''
+        },
         service_items: [
           {
             description: '',
@@ -491,6 +509,12 @@ const InvoicePage: React.FC = () => {
         invoice_type: 'proforma' as 'regular' | 'e-invoice' | 'lotus' | 'proforma',
         invoice_date: new Date().toISOString().split('T')[0],
         partner_company_id: defaultCompanyId,
+        customer_input_type: 'existing' as 'existing' | 'manual',
+        manual_customer: {
+          name: '',
+          address: '',
+          gst: ''
+        },
         service_items: [
           {
             description: '',
@@ -1344,9 +1368,15 @@ const InvoicePage: React.FC = () => {
             <div class="customer">
               <div class="section-title">Customer (Billing)</div>
               <div style="font-size: 9px; line-height: 1.3;">
-                Company name: ${companies.find(c => c.company_id === invoiceFormData.partner_company_id)?.name || 'N/A'}<br>
-                Address: ${companies.find(c => c.company_id === invoiceFormData.partner_company_id)?.address || 'N/A'}<br>
-                GST NO: ${companies.find(c => c.company_id === invoiceFormData.partner_company_id)?.gst1 || 'N/A'}
+                Company name: ${invoiceFormData.customer_input_type === 'manual' 
+                  ? invoiceFormData.manual_customer.name || 'N/A'
+                  : companies.find(c => c.company_id === invoiceFormData.partner_company_id)?.name || 'N/A'}<br>
+                Address: ${invoiceFormData.customer_input_type === 'manual' 
+                  ? invoiceFormData.manual_customer.address || 'N/A'
+                  : companies.find(c => c.company_id === invoiceFormData.partner_company_id)?.address || 'N/A'}<br>
+                GST NO: ${invoiceFormData.customer_input_type === 'manual' 
+                  ? invoiceFormData.manual_customer.gst || 'N/A'
+                  : companies.find(c => c.company_id === invoiceFormData.partner_company_id)?.gst1 || 'N/A'}
               </div>
             </div>
           </div>
@@ -1671,9 +1701,15 @@ const InvoicePage: React.FC = () => {
             <div class="customer">
               <div class="section-title">Customer (Billing)</div>
               <div style="font-size: 9px; line-height: 1.3;">
-                Company name: ${companies.find(c => c.company_id === invoiceFormData.partner_company_id)?.name || 'N/A'}<br>
-                Address: ${companies.find(c => c.company_id === invoiceFormData.partner_company_id)?.address || 'N/A'}<br>
-                GST NO: ${companies.find(c => c.company_id === invoiceFormData.partner_company_id)?.gst1 || 'N/A'}
+                Company name: ${invoiceFormData.customer_input_type === 'manual' 
+                  ? invoiceFormData.manual_customer.name || 'N/A'
+                  : companies.find(c => c.company_id === invoiceFormData.partner_company_id)?.name || 'N/A'}<br>
+                Address: ${invoiceFormData.customer_input_type === 'manual' 
+                  ? invoiceFormData.manual_customer.address || 'N/A'
+                  : companies.find(c => c.company_id === invoiceFormData.partner_company_id)?.address || 'N/A'}<br>
+                GST NO: ${invoiceFormData.customer_input_type === 'manual' 
+                  ? invoiceFormData.manual_customer.gst || 'N/A'
+                  : companies.find(c => c.company_id === invoiceFormData.partner_company_id)?.gst1 || 'N/A'}
               </div>
             </div>
           </div>
@@ -2701,26 +2737,126 @@ const InvoicePage: React.FC = () => {
                   <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
                     Customer (Billing)
                   </Typography>
-                  <FormControl fullWidth size="small" sx={{ mb: 1 }}>
-                    <InputLabel sx={{ fontSize: '0.65rem' }}>Select Partner</InputLabel>
-                    <Select
-                      value={invoiceFormData.partner_company_id.toString()}
-                                              label="Select Partner"
-                      onChange={(e) => setInvoiceFormData({ ...invoiceFormData, partner_company_id: parseInt(e.target.value) })}
-                      sx={{ '& .MuiSelect-select': { fontSize: '0.65rem' } }}
-                    >
-                      {companies.map(company => (
-                        <MenuItem key={company.company_id} value={company.company_id.toString()} sx={{ fontSize: '0.65rem' }}>
-                          {company.name}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <Typography variant="body2" sx={{ fontSize: '0.75rem', lineHeight: 1.4 }}>
-                    Company name: {companies.find(c => c.company_id === invoiceFormData.partner_company_id)?.name || 'N/A'}<br/>
-                    Address: {companies.find(c => c.company_id === invoiceFormData.partner_company_id)?.address || 'N/A'}<br/>
-                    GST NO: {companies.find(c => c.company_id === invoiceFormData.partner_company_id)?.gst1 || 'N/A'}
-                  </Typography>
+                  
+                  {/* 고객 입력 방식 선택 */}
+                  <Box sx={{ mb: 2 }}>
+                    <FormControl component="fieldset">
+                      <Box sx={{ display: 'flex', gap: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <input
+                            type="radio"
+                            id="existing-customer"
+                            name="customer-type"
+                            checked={invoiceFormData.customer_input_type === 'existing'}
+                            onChange={() => setInvoiceFormData({ 
+                              ...invoiceFormData, 
+                              customer_input_type: 'existing',
+                              manual_customer: { name: '', address: '', gst: '' }
+                            })}
+                          />
+                          <Typography component="label" htmlFor="existing-customer" sx={{ ml: 1, fontSize: '0.7rem', cursor: 'pointer' }}>
+                            기존 고객 선택
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <input
+                            type="radio"
+                            id="manual-customer"
+                            name="customer-type"
+                            checked={invoiceFormData.customer_input_type === 'manual'}
+                            onChange={() => setInvoiceFormData({ 
+                              ...invoiceFormData, 
+                              customer_input_type: 'manual'
+                            })}
+                          />
+                          <Typography component="label" htmlFor="manual-customer" sx={{ ml: 1, fontSize: '0.7rem', cursor: 'pointer' }}>
+                            신규 고객 직접 입력
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </FormControl>
+                  </Box>
+
+                  {/* 기존 고객 선택 */}
+                  {invoiceFormData.customer_input_type === 'existing' && (
+                    <>
+                      <FormControl fullWidth size="small" sx={{ mb: 1 }}>
+                        <InputLabel sx={{ fontSize: '0.65rem' }}>Select Partner</InputLabel>
+                        <Select
+                          value={invoiceFormData.partner_company_id.toString()}
+                          label="Select Partner"
+                          onChange={(e) => setInvoiceFormData({ ...invoiceFormData, partner_company_id: parseInt(e.target.value) })}
+                          sx={{ '& .MuiSelect-select': { fontSize: '0.65rem' } }}
+                        >
+                          {companies.map(company => (
+                            <MenuItem key={company.company_id} value={company.company_id.toString()} sx={{ fontSize: '0.65rem' }}>
+                              {company.name}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <Typography variant="body2" sx={{ fontSize: '0.75rem', lineHeight: 1.4 }}>
+                        Company name: {companies.find(c => c.company_id === invoiceFormData.partner_company_id)?.name || 'N/A'}<br/>
+                        Address: {companies.find(c => c.company_id === invoiceFormData.partner_company_id)?.address || 'N/A'}<br/>
+                        GST NO: {companies.find(c => c.company_id === invoiceFormData.partner_company_id)?.gst1 || 'N/A'}
+                      </Typography>
+                    </>
+                  )}
+
+                  {/* 신규 고객 직접 입력 */}
+                  {invoiceFormData.customer_input_type === 'manual' && (
+                    <>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Company Name"
+                        value={invoiceFormData.manual_customer.name}
+                        onChange={(e) => setInvoiceFormData({ 
+                          ...invoiceFormData, 
+                          manual_customer: { 
+                            ...invoiceFormData.manual_customer, 
+                            name: e.target.value 
+                          }
+                        })}
+                        sx={{ mb: 1, '& .MuiInputLabel-root': { fontSize: '0.65rem' }, '& .MuiInputBase-input': { fontSize: '0.65rem' } }}
+                      />
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Address"
+                        multiline
+                        rows={2}
+                        value={invoiceFormData.manual_customer.address}
+                        onChange={(e) => setInvoiceFormData({ 
+                          ...invoiceFormData, 
+                          manual_customer: { 
+                            ...invoiceFormData.manual_customer, 
+                            address: e.target.value 
+                          }
+                        })}
+                        sx={{ mb: 1, '& .MuiInputLabel-root': { fontSize: '0.65rem' }, '& .MuiInputBase-input': { fontSize: '0.65rem' } }}
+                      />
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="GST Number (Optional)"
+                        value={invoiceFormData.manual_customer.gst}
+                        onChange={(e) => setInvoiceFormData({ 
+                          ...invoiceFormData, 
+                          manual_customer: { 
+                            ...invoiceFormData.manual_customer, 
+                            gst: e.target.value 
+                          }
+                        })}
+                        sx={{ mb: 1, '& .MuiInputLabel-root': { fontSize: '0.65rem' }, '& .MuiInputBase-input': { fontSize: '0.65rem' } }}
+                      />
+                      <Typography variant="body2" sx={{ fontSize: '0.75rem', lineHeight: 1.4, color: '#666' }}>
+                        Company name: {invoiceFormData.manual_customer.name || 'N/A'}<br/>
+                        Address: {invoiceFormData.manual_customer.address || 'N/A'}<br/>
+                        GST NO: {invoiceFormData.manual_customer.gst || 'N/A'}
+                      </Typography>
+                    </>
+                  )}
                 </Box>
               </Grid>
             </Grid>
