@@ -6,6 +6,7 @@ import {
   Typography, 
   Paper, 
   Alert,
+  AlertTitle,
   Grid,
   Accordion,
   AccordionSummary,
@@ -52,6 +53,7 @@ const SystemInit: React.FC = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -160,7 +162,12 @@ const SystemInit: React.FC = () => {
       });
 
       if (response.data.success) {
-        navigate('/login');
+        setError('');
+        setSuccess(true);
+        // 2초 후 로그인 페이지로 자동 이동
+        setTimeout(() => {
+          navigate('/login');
+        }, 2000);
       }
     } catch (error: any) {
       console.error('Initialization error:', error);
@@ -206,11 +213,6 @@ const SystemInit: React.FC = () => {
         </Box>
 
         <form onSubmit={handleSubmit}>
-          {error && (
-            <Alert severity="error" sx={{ mb: 3 }}>
-              {error}
-            </Alert>
-          )}
 
           {/* 필수 정보 섹션 */}
           <Box sx={{ mb: 3 }}>
@@ -406,7 +408,7 @@ const SystemInit: React.FC = () => {
             color="primary"
             fullWidth
             size="large"
-            disabled={loading}
+            disabled={loading || success}
             sx={{ 
               mt: 3, 
               py: 1.5, 
@@ -414,8 +416,24 @@ const SystemInit: React.FC = () => {
               fontWeight: 'bold'
             }}
           >
-            {loading ? '초기화 중...' : '초기화'}
+            {loading ? '초기화 중...' : success ? '완료됨' : '초기화'}
           </Button>
+
+          {/* 성공 메시지 */}
+          {success && (
+            <Alert severity="success" sx={{ mt: 2 }}>
+              <AlertTitle>초기화 완료!</AlertTitle>
+              시스템 초기화가 성공적으로 완료되었습니다. 잠시 후 로그인 페이지로 이동합니다...
+            </Alert>
+          )}
+
+          {/* 오류 메시지 */}
+          {error && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              <AlertTitle>오류</AlertTitle>
+              {error}
+            </Alert>
+          )}
 
           <Typography variant="caption" color="text.secondary" align="center" sx={{ mt: 2, display: 'block' }}>
             초기화 후 나머지 설정은 관리 메뉴에서 할 수 있습니다
