@@ -191,18 +191,19 @@ const UserListPage: React.FC = () => {
     
     setEditingUser(null);
     
-    // 현재 사용자 권한에 따라 기본 역할 설정
-    let defaultRole = 'user';
+    // 현재 사용자 권한에 따라 기본 역할 설정 (System Administrator 제외)
+    let defaultRole = 'admin';
     if (currentUser?.role === 'root') {
-      defaultRole = 'user'; // root는 admin, audit, user 중 선택 가능
-      console.log('root 사용자: admin, audit, user 중 선택 가능');
+      defaultRole = 'admin'; // root는 admin, audit, user 중 선택 가능 (기본: admin)
+      console.log('root 사용자: admin, audit, user 중 선택 가능 (System Administrator 제외)');
     } else if (currentUser?.role === 'admin') {
-      defaultRole = 'user'; // admin은 user만 선택 가능
-      console.log('admin 사용자: user만 선택 가능');
+      defaultRole = 'user'; // admin은 admin, user 중 선택 가능 (기본: user)
+      console.log('admin 사용자: admin, user 중 선택 가능');
     } else if (currentUser?.role === 'audit') {
-      defaultRole = 'user'; // audit는 admin, user 중 선택 가능
-      console.log('audit 사용자: admin, user 중 선택 가능');
+      defaultRole = 'admin'; // audit는 audit, admin, user 중 선택 가능 (기본: admin)
+      console.log('audit 사용자: audit, admin, user 중 선택 가능');
     } else {
+      defaultRole = 'user';
       console.log('알 수 없는 역할:', currentUser?.role);
     }
     
@@ -794,55 +795,84 @@ const UserListPage: React.FC = () => {
                     );
                   }
                   
-                  // 임시: 모든 옵션 표시하여 문제 확인
-                  console.log('임시: 모든 역할 옵션 표시');
-                  return (
-                    <>
-                      <MenuItem value="root" sx={{ fontSize: '0.75rem' }}>System Administrator</MenuItem>
-                      <MenuItem value="admin" sx={{ fontSize: '0.75rem' }}>Administrator</MenuItem>
-                      <MenuItem value="audit" sx={{ fontSize: '0.75rem' }}>Auditor</MenuItem>
-                      <MenuItem value="user" sx={{ fontSize: '0.75rem' }}>User</MenuItem>
-                    </>
-                  );
+                  // 사용자 추가/수정에 따른 역할 옵션 제한
+                  // 사용자 추가 시: System Administrator 역할 제외
+                  // 사용자 수정 시: 기존 로직 유지
                   
-                  // 원래 로직 (주석 처리)
-                  /*
-                  if (currentUser?.role === 'root') {
-                    console.log('root 사용자 옵션 렌더링');
-                    return (
-                      <>
-                        <MenuItem value="root" sx={{ fontSize: '0.75rem' }}>System Administrator</MenuItem>
-                        <MenuItem value="admin" sx={{ fontSize: '0.75rem' }}>Administrator</MenuItem>
-                        <MenuItem value="audit" sx={{ fontSize: '0.75rem' }}>Auditor</MenuItem>
-                        <MenuItem value="user" sx={{ fontSize: '0.75rem' }}>User</MenuItem>
-                      </>
-                    );
-                  } else if (currentUser?.role === 'admin') {
-                    console.log('admin 사용자 옵션 렌더링');
-                    return (
-                      <>
-                        <MenuItem value="admin" sx={{ fontSize: '0.75rem' }}>Administrator</MenuItem>
-                        <MenuItem value="user" sx={{ fontSize: '0.75rem' }}>User</MenuItem>
-                      </>
-                    );
-                  } else if (currentUser?.role === 'audit') {
-                    console.log('audit 사용자 옵션 렌더링');
-                    return (
-                      <>
-                        <MenuItem value="audit" sx={{ fontSize: '0.75rem' }}>Auditor</MenuItem>
-                        <MenuItem value="admin" sx={{ fontSize: '0.75rem' }}>Administrator</MenuItem>
-                        <MenuItem value="user" sx={{ fontSize: '0.75rem' }}>User</MenuItem>
-                      </>
-                    );
+                  if (!editingUser) {
+                    // 사용자 추가 모드: System Administrator 제외
+                    if (currentUser?.role === 'root') {
+                      console.log('root 사용자 - 추가 모드: Administrator, Auditor, User 옵션');
+                      return (
+                        <>
+                          <MenuItem value="admin" sx={{ fontSize: '0.75rem' }}>Administrator</MenuItem>
+                          <MenuItem value="audit" sx={{ fontSize: '0.75rem' }}>Auditor</MenuItem>
+                          <MenuItem value="user" sx={{ fontSize: '0.75rem' }}>User</MenuItem>
+                        </>
+                      );
+                    } else if (currentUser?.role === 'admin') {
+                      console.log('admin 사용자 - 추가 모드: Administrator, User 옵션');
+                      return (
+                        <>
+                          <MenuItem value="admin" sx={{ fontSize: '0.75rem' }}>Administrator</MenuItem>
+                          <MenuItem value="user" sx={{ fontSize: '0.75rem' }}>User</MenuItem>
+                        </>
+                      );
+                    } else if (currentUser?.role === 'audit') {
+                      console.log('audit 사용자 - 추가 모드: Auditor, Administrator, User 옵션');
+                      return (
+                        <>
+                          <MenuItem value="audit" sx={{ fontSize: '0.75rem' }}>Auditor</MenuItem>
+                          <MenuItem value="admin" sx={{ fontSize: '0.75rem' }}>Administrator</MenuItem>
+                          <MenuItem value="user" sx={{ fontSize: '0.75rem' }}>User</MenuItem>
+                        </>
+                      );
+                    } else {
+                      console.log('기타 사용자 - 추가 모드: User 옵션만');
+                      return (
+                        <>
+                          <MenuItem value="user" sx={{ fontSize: '0.75rem' }}>User</MenuItem>
+                        </>
+                      );
+                    }
                   } else {
-                    console.log('알 수 없는 역할, 기본 옵션 렌더링');
-                    return (
-                      <>
-                        <MenuItem value="user" sx={{ fontSize: '0.75rem' }}>User</MenuItem>
-                      </>
-                    );
+                    // 사용자 수정 모드: 모든 역할 포함 (기존 로직)
+                    if (currentUser?.role === 'root') {
+                      console.log('root 사용자 - 수정 모드: 모든 역할 옵션');
+                      return (
+                        <>
+                          <MenuItem value="root" sx={{ fontSize: '0.75rem' }}>System Administrator</MenuItem>
+                          <MenuItem value="admin" sx={{ fontSize: '0.75rem' }}>Administrator</MenuItem>
+                          <MenuItem value="audit" sx={{ fontSize: '0.75rem' }}>Auditor</MenuItem>
+                          <MenuItem value="user" sx={{ fontSize: '0.75rem' }}>User</MenuItem>
+                        </>
+                      );
+                    } else if (currentUser?.role === 'admin') {
+                      console.log('admin 사용자 - 수정 모드: Administrator, User 옵션');
+                      return (
+                        <>
+                          <MenuItem value="admin" sx={{ fontSize: '0.75rem' }}>Administrator</MenuItem>
+                          <MenuItem value="user" sx={{ fontSize: '0.75rem' }}>User</MenuItem>
+                        </>
+                      );
+                    } else if (currentUser?.role === 'audit') {
+                      console.log('audit 사용자 - 수정 모드: Auditor, Administrator, User 옵션');
+                      return (
+                        <>
+                          <MenuItem value="audit" sx={{ fontSize: '0.75rem' }}>Auditor</MenuItem>
+                          <MenuItem value="admin" sx={{ fontSize: '0.75rem' }}>Administrator</MenuItem>
+                          <MenuItem value="user" sx={{ fontSize: '0.75rem' }}>User</MenuItem>
+                        </>
+                      );
+                    } else {
+                      console.log('기타 사용자 - 수정 모드: User 옵션만');
+                      return (
+                        <>
+                          <MenuItem value="user" sx={{ fontSize: '0.75rem' }}>User</MenuItem>
+                        </>
+                      );
+                    }
                   }
-                  */
                 })()}
                 {/* root는 자신과 같은 역할도 추가 가능하므로 별도 처리하지 않음 */}
               </Select>
