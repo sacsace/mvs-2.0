@@ -550,7 +550,7 @@ const CompanyPage: React.FC = () => {
         ? `/api/companies/${selectedCompany?.company_id}`
         : '/api/companies';
       
-      // gstNumbers를 개별 gst 필드로 변환
+      // gstNumbers를 개별 gst 필드로 변환 (Railway 빌드 캐시 리셋용 주석)
       const gstNumbers = formData.gstNumbers || [''];
       const { gstNumbers: _, ...baseData } = formData;
       
