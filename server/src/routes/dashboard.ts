@@ -24,8 +24,8 @@ router.get('/stats', authenticateJWT, async (req, res) => {
 
     // 사용자 통계
     let userStats;
-    if (userRole === 'admin' || userRole === 'root') {
-      // 관리자는 전체 사용자 통계 볼 수 있음
+    if (userRole === 'root') {
+      // root 사용자만 전체 사용자 통계 볼 수 있음
       const totalUsers = await User.count({ where: { is_deleted: false } });
       const adminUsers = await User.count({ 
         where: { 
@@ -40,7 +40,7 @@ router.get('/stats', authenticateJWT, async (req, res) => {
         regular: totalUsers - adminUsers
       };
     } else {
-      // 일반 사용자는 자신 회사의 사용자만
+      // admin 및 일반 사용자는 자신 회사의 사용자만
       const totalUsers = await User.count({ 
         where: { 
           is_deleted: false,
@@ -64,7 +64,8 @@ router.get('/stats', authenticateJWT, async (req, res) => {
 
     // 회사 통계
     let companyStats;
-    if (userRole === 'admin' || userRole === 'root') {
+    if (userRole === 'root') {
+      // root 사용자만 전체 회사 통계 볼 수 있음
       const totalCompanies = await Company.count({ where: { is_deleted: false } });
       const activeCompanies = await Company.count({ 
         where: { 
@@ -78,7 +79,7 @@ router.get('/stats', authenticateJWT, async (req, res) => {
         active: activeCompanies
       };
     } else {
-      // 일반 사용자는 자신의 회사 정보만
+      // admin 및 일반 사용자는 자신의 회사 정보만
       companyStats = {
         total: 1,
         active: 1
@@ -173,6 +174,7 @@ router.get('/me', authenticateJWT, async (req, res) => {
       include: [
         {
           model: Company,
+          as: 'company',
           attributes: ['company_id', 'name']
         }
       ]

@@ -393,7 +393,7 @@ const DashboardPage: React.FC<DashboardProps> = ({ menus, onMenuSelect }) => {
                       <ListItemText
                         primary={activity.message}
                         secondary={
-                          <Box display="flex" alignItems="center" gap={1}>
+                          <Box display="flex" alignItems="center" gap={1} component="div">
                             <TimeIcon fontSize="small" />
                             {activity.timestamp}
                             {activity.user && (
@@ -405,6 +405,7 @@ const DashboardPage: React.FC<DashboardProps> = ({ menus, onMenuSelect }) => {
                             )}
                           </Box>
                         }
+                        secondaryTypographyProps={{ component: 'div' }}
                       />
                     </ListItem>
                     {index < stats.recentActivities.length - 1 && <Divider />}
