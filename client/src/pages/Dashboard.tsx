@@ -55,6 +55,7 @@ import PartnerPage from './PartnerPage';
 import ApprovalPage from './ApprovalPage';
 import AccountingStatisticsPage from './AccountingStatisticsPage';
 import InvoicePage from './InvoicePage';
+import DashboardPage from './DashboardPage';
 
 interface MenuItem {
   menu_id: number;
@@ -1361,7 +1362,7 @@ const Dashboard: React.FC = () => {
     if (!searchTerm) {
       // 대시보드 페이지
       if (currentPage === 'dashboard') {
-        return renderDashboardContent();
+        return <DashboardPage />;
       }
 
       // 다른 메뉴 페이지

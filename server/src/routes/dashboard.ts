@@ -1,17 +1,19 @@
 import { Router } from 'express';
-import User from '../models/User';
-import Menu from '../models/Menu';
-import Company from '../models/Company';
-import MenuPermission from '../models/MenuPermission';
 import { authenticateJWT } from '../utils/jwtMiddleware';
-import { Op, QueryTypes } from 'sequelize';
-import sequelize from '../config/database';
+import User from '../models/User';
+import Company from '../models/Company';
+import Menu from '../models/Menu';
+import MenuPermission from '../models/MenuPermission';
+import logger from '../utils/logger';
 
 const router = Router();
 
-// 대시보드 통계 조회
+// 대시보드 통계 데이터 조회
 router.get('/stats', authenticateJWT, async (req, res) => {
   try {
+    console.log('대시보드 통계 API 호출됨');
+    console.log('사용자 정보:', req.user);
+
     const userId = req.user?.id;
     const userRole = req.user?.role;
     const companyId = req.user?.company_id;
@@ -20,152 +22,221 @@ router.get('/stats', authenticateJWT, async (req, res) => {
       return res.status(401).json({ error: '인증이 필요합니다.' });
     }
 
-    // 기본 통계 데이터 수집
-    const stats: any = {};
-
     // 사용자 통계
-    const userStats = await sequelize.query(`
-      SELECT 
-        COUNT(*) as totalUsers,
-        SUM(CASE WHEN role = 'admin' THEN 1 ELSE 0 END) as adminUsers,
-        SUM(CASE WHEN role = 'user' THEN 1 ELSE 0 END) as regularUsers
-      FROM user 
-      WHERE is_deleted = 0 ${userRole !== 'root' ? 'AND company_id = ?' : ''}
-    `, {
-      replacements: userRole !== 'root' ? [companyId] : [],
-      type: QueryTypes.SELECT
-    }) as any[];
-
-    stats.users = {
-      total: parseInt(userStats[0]?.totalUsers || '0'),
-      admin: parseInt(userStats[0]?.adminUsers || '0'),
-      regular: parseInt(userStats[0]?.regularUsers || '0')
-    };
-
-    // 메뉴 통계
-    const menuStats = await sequelize.query(`
-      SELECT 
-        COUNT(*) as totalMenus,
-        SUM(CASE WHEN parent_id IS NULL THEN 1 ELSE 0 END) as topLevelMenus,
-        SUM(CASE WHEN parent_id IS NOT NULL THEN 1 ELSE 0 END) as subMenus
-      FROM menu
-    `, {
-      type: QueryTypes.SELECT
-    }) as any[];
-
-    stats.menus = {
-      total: parseInt(menuStats[0]?.totalMenus || '0'),
-      topLevel: parseInt(menuStats[0]?.topLevelMenus || '0'),
-      subMenus: parseInt(menuStats[0]?.subMenus || '0')
-    };
-
-    // 회사 통계
-    const companyStats = await sequelize.query(`
-      SELECT COUNT(*) as totalCompanies
-      FROM company 
-      WHERE is_deleted = 0
-    `, {
-      type: QueryTypes.SELECT
-    }) as any[];
-
-    stats.companies = {
-      total: parseInt(companyStats[0]?.totalCompanies || '0')
-    };
-
-    // 메뉴 권한 통계
-    const permissionStats = await sequelize.query(`
-      SELECT 
-        COUNT(*) as totalPermissions,
-        SUM(CASE WHEN can_read = 1 THEN 1 ELSE 0 END) as readPermissions,
-        SUM(CASE WHEN can_create = 1 THEN 1 ELSE 0 END) as createPermissions,
-        SUM(CASE WHEN can_update = 1 THEN 1 ELSE 0 END) as updatePermissions,
-        SUM(CASE WHEN can_delete = 1 THEN 1 ELSE 0 END) as deletePermissions
-      FROM menu_permission
-    `, {
-      type: QueryTypes.SELECT
-    }) as any[];
-
-    stats.permissions = {
-      total: parseInt(permissionStats[0]?.totalPermissions || '0'),
-      read: parseInt(permissionStats[0]?.readPermissions || '0'),
-      create: parseInt(permissionStats[0]?.createPermissions || '0'),
-      update: parseInt(permissionStats[0]?.updatePermissions || '0'),
-      delete: parseInt(permissionStats[0]?.deletePermissions || '0')
-    };
-
-    // 최근 활동 (최근 생성된 사용자)
-    const recentUsers = await sequelize.query(`
-      SELECT id, username, role, create_date
-      FROM user 
-      WHERE is_deleted = 0 ${userRole !== 'root' ? 'AND company_id = ?' : ''}
-      ORDER BY create_date DESC 
-      LIMIT 5
-    `, {
-      replacements: userRole !== 'root' ? [companyId] : [],
-      type: QueryTypes.SELECT
-    }) as any[];
-
-    stats.recentUsers = recentUsers;
-
-    // 매입/매출 통계 (invoice 테이블이 있는 경우)
-    try {
-      const invoiceStats = await sequelize.query(`
-        SELECT 
-          COUNT(*) as totalInvoices,
-          SUM(CASE WHEN invoice_type = 'regular' THEN 1 ELSE 0 END) as regularInvoices,
-          SUM(CASE WHEN invoice_type = 'e-invoice' THEN 1 ELSE 0 END) as eInvoices,
-          SUM(CASE WHEN invoice_type = 'proforma' THEN 1 ELSE 0 END) as proformaInvoices,
-          SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END) as draftInvoices,
-          SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) as sentInvoices,
-          SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) as paidInvoices,
-          SUM(total_amount) as totalAmount
-        FROM invoice 
-        WHERE 1=1 ${userRole !== 'root' ? 'AND company_id = ?' : ''}
-      `, {
-        replacements: userRole !== 'root' ? [companyId] : [],
-        type: QueryTypes.SELECT
-      }) as any[];
-
-      stats.invoices = {
-        total: parseInt(invoiceStats[0]?.totalInvoices || '0'),
-        regular: parseInt(invoiceStats[0]?.regularInvoices || '0'),
-        eInvoice: parseInt(invoiceStats[0]?.eInvoices || '0'),
-        proforma: parseInt(invoiceStats[0]?.proformaInvoices || '0'),
-        draft: parseInt(invoiceStats[0]?.draftInvoices || '0'),
-        sent: parseInt(invoiceStats[0]?.sentInvoices || '0'),
-        paid: parseInt(invoiceStats[0]?.paidInvoices || '0'),
-        totalAmount: parseFloat(invoiceStats[0]?.totalAmount || '0')
+    let userStats;
+    if (userRole === 'admin' || userRole === 'root') {
+      // 관리자는 전체 사용자 통계 볼 수 있음
+      const totalUsers = await User.count({ where: { is_deleted: false } });
+      const adminUsers = await User.count({ 
+        where: { 
+          is_deleted: false,
+          role: ['admin', 'root']
+        }
+      });
+      
+      userStats = {
+        total: totalUsers,
+        admin: adminUsers,
+        regular: totalUsers - adminUsers
       };
-    } catch (error) {
-      console.log('invoice 테이블이 없거나 오류 발생:', error);
-      stats.invoices = {
-        total: 0,
-        regular: 0,
-        eInvoice: 0,
-        proforma: 0,
-        draft: 0,
-        sent: 0,
-        paid: 0,
-        totalAmount: 0
+    } else {
+      // 일반 사용자는 자신 회사의 사용자만
+      const totalUsers = await User.count({ 
+        where: { 
+          is_deleted: false,
+          company_id: companyId
+        }
+      });
+      const adminUsers = await User.count({ 
+        where: { 
+          is_deleted: false,
+          company_id: companyId,
+          role: ['admin', 'root']
+        }
+      });
+      
+      userStats = {
+        total: totalUsers,
+        admin: adminUsers,
+        regular: totalUsers - adminUsers
       };
     }
 
-    // 시스템 정보
-    stats.system = {
-      currentTime: new Date(),
-      userRole: userRole,
-      companyId: companyId
+    // 회사 통계
+    let companyStats;
+    if (userRole === 'admin' || userRole === 'root') {
+      const totalCompanies = await Company.count({ where: { is_deleted: false } });
+      const activeCompanies = await Company.count({ 
+        where: { 
+          is_deleted: false,
+          // 추가 조건 (예: 최근 활동이 있는 회사)
+        }
+      });
+      
+      companyStats = {
+        total: totalCompanies,
+        active: activeCompanies
+      };
+    } else {
+      // 일반 사용자는 자신의 회사 정보만
+      companyStats = {
+        total: 1,
+        active: 1
+      };
+    }
+
+    // 메뉴 통계
+    const totalMenus = await Menu.count();
+    const accessibleMenus = await MenuPermission.count({
+      where: {
+        user_id: userId,
+        can_read: true
+      }
+    });
+
+    const menuStats = {
+      total: totalMenus,
+      accessible: accessibleMenus
+    };
+
+    // 최근 활동 (간단한 목업 데이터)
+    const recentActivities = [
+      {
+        id: 1,
+        type: 'login',
+        message: '새로운 사용자가 로그인했습니다',
+        timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(), // 5분 전
+        user: req.user?.username || 'admin'
+      },
+      {
+        id: 2,
+        type: 'invoice',
+        message: '새로운 송장이 생성되었습니다',
+        timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(), // 15분 전
+        user: 'manager'
+      },
+      {
+        id: 3,
+        type: 'approval',
+        message: '전자결재 요청이 승인되었습니다',
+        timestamp: new Date(Date.now() - 60 * 60 * 1000).toISOString(), // 1시간 전
+        user: 'director'
+      },
+      {
+        id: 4,
+        type: 'user',
+        message: '새로운 사용자가 등록되었습니다',
+        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2시간 전
+        user: 'admin'
+      }
+    ];
+
+    const dashboardStats = {
+      users: userStats,
+      companies: companyStats,
+      menus: menuStats,
+      recentActivities,
+      systemStatus: {
+        status: 'healthy',
+        uptime: process.uptime(),
+        version: '2.0.0'
+      }
+    };
+
+    logger.info('대시보드 통계 조회 완료', { userId, stats: dashboardStats });
+
+    res.json({
+      success: true,
+      data: dashboardStats
+    });
+
+  } catch (error) {
+    logger.error('대시보드 통계 조회 중 오류:', error);
+    res.status(500).json({ 
+      success: false,
+      error: '대시보드 통계 조회 중 오류가 발생했습니다.' 
+    });
+  }
+});
+
+// 사용자 정보 조회 (현재 로그인한 사용자)
+router.get('/me', authenticateJWT, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: '인증이 필요합니다.' });
+    }
+
+    const user = await User.findByPk(userId, {
+      attributes: ['id', 'userid', 'username', 'role', 'company_id', 'default_language'],
+      include: [
+        {
+          model: Company,
+          attributes: ['company_id', 'name']
+        }
+      ]
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+    }
+
+    res.json({
+      success: true,
+      data: user
+    });
+
+  } catch (error) {
+    logger.error('사용자 정보 조회 중 오류:', error);
+    res.status(500).json({ 
+      success: false,
+      error: '사용자 정보 조회 중 오류가 발생했습니다.' 
+    });
+  }
+});
+
+// 시스템 성능 정보 조회
+router.get('/performance', authenticateJWT, async (req, res) => {
+  try {
+    const userRole = req.user?.role;
+    
+    // 관리자만 시스템 성능 정보 조회 가능
+    if (userRole !== 'admin' && userRole !== 'root') {
+      return res.status(403).json({ 
+        error: '권한이 없습니다. 관리자만 접근 가능합니다.' 
+      });
+    }
+
+    const performance = {
+      cpu: {
+        usage: Math.floor(Math.random() * 50) + 10, // 10-60% 랜덤
+        cores: require('os').cpus().length
+      },
+      memory: {
+        usage: Math.floor(Math.random() * 40) + 30, // 30-70% 랜덤
+        total: Math.round(require('os').totalmem() / 1024 / 1024 / 1024), // GB
+        free: Math.round(require('os').freemem() / 1024 / 1024 / 1024) // GB
+      },
+      disk: {
+        usage: Math.floor(Math.random() * 30) + 50, // 50-80% 랜덤
+      },
+      uptime: process.uptime(),
+      nodeVersion: process.version
     };
 
     res.json({
       success: true,
-      data: stats
+      data: performance
     });
 
   } catch (error) {
-    console.error('대시보드 통계 조회 중 오류:', error);
-    res.status(500).json({ error: '대시보드 통계 조회 중 오류가 발생했습니다.' });
+    logger.error('시스템 성능 정보 조회 중 오류:', error);
+    res.status(500).json({ 
+      success: false,
+      error: '시스템 성능 정보 조회 중 오류가 발생했습니다.' 
+    });
   }
 });
 
-export default router; 
+export default router;

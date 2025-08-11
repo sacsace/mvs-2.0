@@ -17,6 +17,7 @@ import approvalRouter from './routes/approval';
 import accountingRouter from './routes/accounting';
 import invoiceRouter from './routes/invoice';
 import partnerRouter from './routes/partners';
+import dashboardRouter from './routes/dashboard';
 import logger from './utils/logger';
 
 // 프로세스 에러 핸들링
@@ -73,6 +74,7 @@ app.use('/api/approval', approvalRouter);
 app.use('/api/accounting', accountingRouter);
 app.use('/api/invoice', invoiceRouter);
 app.use('/api/partners', partnerRouter);
+app.use('/api/dashboard', dashboardRouter);
 
 // 프로덕션에서 클라이언트 라우팅 처리
 if (process.env.NODE_ENV === 'production') {
