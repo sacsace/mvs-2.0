@@ -27,6 +27,14 @@ MenuPermission.belongsTo(Menu, { foreignKey: 'menu_id', as: 'menu' });
 Menu.belongsTo(Menu, { foreignKey: 'parent_id', as: 'parentMenu' });
 Menu.hasMany(Menu, { foreignKey: 'parent_id', as: 'childMenus' });
 
+// User - UserPermission 직접 관계
+User.hasMany(UserPermission, { foreignKey: 'user_id', as: 'userPermissions' });
+UserPermission.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+// Permission - UserPermission 직접 관계
+Permission.hasMany(UserPermission, { foreignKey: 'permission_id', as: 'userPermissions' });
+UserPermission.belongsTo(Permission, { foreignKey: 'permission_id', as: 'permission' });
+
 // User - Permission 관계 (through UserPermission)
 User.belongsToMany(Permission, { through: UserPermission, foreignKey: 'user_id', as: 'permissions' });
 Permission.belongsToMany(User, { through: UserPermission, foreignKey: 'permission_id', as: 'users' });

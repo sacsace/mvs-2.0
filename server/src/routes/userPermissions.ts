@@ -21,7 +21,7 @@ router.get('/', authenticateJWT, async (req: Request, res: Response) => {
     if (userRole === 'admin' || userRole === 'regular') {
       // admin과 regular는 자사 사용자 권한만 볼 수 있음
       whereClause = {
-        '$User.company_id$': userCompanyId
+        '$user.company_id$': userCompanyId
       };
     }
     // audit와 root는 모든 사용자 권한을 볼 수 있음
@@ -30,7 +30,7 @@ router.get('/', authenticateJWT, async (req: Request, res: Response) => {
       include: [
         {
           model: User,
-          as: 'User',
+          as: 'user',
           attributes: ['id', 'username', 'role', 'company_id'],
           include: [
             {
@@ -42,7 +42,7 @@ router.get('/', authenticateJWT, async (req: Request, res: Response) => {
         },
         {
           model: Permission,
-          as: 'Permission',
+          as: 'permission',
           attributes: ['id', 'name', 'level', 'company_access']
         }
       ],
@@ -57,11 +57,11 @@ router.get('/', authenticateJWT, async (req: Request, res: Response) => {
       permission_id: up.permission_id,
       granted_at: up.granted_at,
       granted_by: up.granted_by,
-      permission_name: up.Permission?.name,
-      permission_level: up.Permission?.level,
-      user_username: up.User?.username,
-      user_role: up.User?.role,
-      company_name: up.User?.company?.name
+      permission_name: up.permission?.name,
+      permission_level: up.permission?.level,
+      user_username: up.user?.username,
+      user_role: up.user?.role,
+      company_name: up.user?.company?.name
     }));
 
     res.json(formattedPermissions);
@@ -106,7 +106,7 @@ router.get('/:userId', authenticateJWT, async (req: Request, res: Response) => {
       include: [
         {
           model: Permission,
-          as: 'Permission',
+          as: 'permission',
           attributes: ['id', 'name', 'description', 'level', 'company_access']
         }
       ]
