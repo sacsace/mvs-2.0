@@ -552,13 +552,23 @@ const CompanyPage: React.FC = () => {
       
       // gstNumbers를 개별 gst 필드로 변환
       const gstNumbers = formData.gstNumbers || [''];
-      const { gstNumbers: _, ...requestData } = {
+      let requestData = {
         ...formData,
         gst1: gstNumbers[0] || '',
         gst2: gstNumbers[1] || '',
         gst3: gstNumbers[2] || '',
         gst4: gstNumbers[3] || '',
       };
+      
+      // gstNumbers 제거
+      delete requestData.gstNumbers;
+      
+      // admin 사용자는 일부 필드 수정 불가
+      if (currentUser?.role === 'admin') {
+        delete requestData.login_period_start;
+        delete requestData.login_period_end;
+        delete requestData.partner_type; // admin은 회사 타입 수정 불가
+      }
       
       const response = await fetch(url, {
         method: isEditing ? 'PUT' : 'POST',
