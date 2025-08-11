@@ -18,7 +18,7 @@
     "init-db": "ts-node src/scripts/initializeDatabase.ts",
     "update-menus": "ts-node src/scripts/updateProductionMenus.ts",
     "init-system": "ts-node src/scripts/initializeWithoutConstraints.ts",
-    "postbuild": "npm run update-menus"
+    "postbuild": "npm run update-menus || echo 'Menu update skipped - database not initialized'"
   },
   "dependencies": {
     "@types/jest": "^29.5.14",

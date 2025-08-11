@@ -96,9 +96,26 @@ logger.info(`Starting server on port ${PORT}`);
 logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
 logger.info(`Database URL exists: ${!!process.env.DATABASE_URL}`);
 
-app.listen(PORT, '0.0.0.0', () => {
+// 서버 시작 및 데이터베이스 동기화
+app.listen(PORT, '0.0.0.0', async () => {
   logger.info(`✅ Server is running on port ${PORT}`);
   logger.info(`✅ Health check available at: http://localhost:${PORT}/api/init/health`);
+  
+  try {
+    // 데이터베이스 연결 확인
+    await sequelize.authenticate();
+    logger.info('✅ Database connection established');
+    
+    // 프로덕션 환경에서 테이블 동기화
+    if (process.env.NODE_ENV === 'production') {
+      await sequelize.sync({ alter: false });
+      logger.info('✅ Database tables synchronized');
+    }
+  } catch (error) {
+    logger.error('❌ Database connection failed:', error);
+    // 데이터베이스 연결 실패해도 서버는 계속 실행 (헬스체크용)
+  }
+  
   logger.info(`✅ Server startup completed successfully`);
 }).on('error', (error) => {
   logger.error(`❌ Server failed to start:`, error);

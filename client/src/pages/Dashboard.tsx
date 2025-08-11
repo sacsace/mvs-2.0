@@ -1362,7 +1362,7 @@ const Dashboard: React.FC = () => {
     if (!searchTerm) {
       // 대시보드 페이지
       if (currentPage === 'dashboard') {
-        return <DashboardPage />;
+        return <DashboardPage menus={menus} onMenuSelect={handleMenuClick} />;
       }
 
       // 다른 메뉴 페이지

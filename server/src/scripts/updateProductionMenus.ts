@@ -170,6 +170,21 @@ async function updateProductionMenus() {
 
     console.log('📋 현재 메뉴 상태 확인 중...');
     
+    // 테이블 존재 여부 확인
+    try {
+      const [results] = await sequelize.query("SELECT name FROM sqlite_master WHERE type='table' AND name='menu';");
+      if (!results || (results as any[]).length === 0) {
+        console.log('⚠️  메뉴 테이블이 존재하지 않습니다. 초기화가 필요합니다.');
+        console.log('💡 시스템이 아직 초기화되지 않았습니다.');
+        console.log('   프로덕션 환경에서는 자동으로 테이블이 생성됩니다.');
+        return;
+      }
+    } catch (error) {
+      console.log('⚠️  데이터베이스 테이블 확인 중 오류 발생:', error);
+      console.log('💡 메뉴 업데이트를 건너뜁니다.');
+      return;
+    }
+    
     // 현재 메뉴 개수 확인
     const currentMenuCount = await Menu.count();
     console.log(`현재 메뉴 개수: ${currentMenuCount}개`);

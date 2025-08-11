@@ -29,7 +29,22 @@ import {
   Notifications as NotificationsIcon,
   AccessTime as TimeIcon,
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+
+interface MenuItem {
+  menu_id: number;
+  name: string;
+  name_en: string;
+  parent_id: number | null;
+  order_num: number;
+  icon: string;
+  url?: string;
+  description?: string;
+}
+
+interface DashboardProps {
+  menus?: MenuItem[];
+  onMenuSelect?: (menu: MenuItem) => void;
+}
 
 interface DashboardStats {
   users: {
@@ -54,12 +69,24 @@ interface DashboardStats {
   }>;
 }
 
-const DashboardPage: React.FC = () => {
-  const navigate = useNavigate();
+const DashboardPage: React.FC<DashboardProps> = ({ menus, onMenuSelect }) => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>('');
+
+  // 메뉴 URL로 메뉴 객체 찾기
+  const findMenuByUrl = (url: string): MenuItem | undefined => {
+    return menus?.find(menu => menu.url === url);
+  };
+
+  // 메뉴 네비게이션 핸들러
+  const handleMenuNavigation = (url: string) => {
+    const menu = findMenuByUrl(url);
+    if (menu && onMenuSelect) {
+      onMenuSelect(menu);
+    }
+  };
 
   useEffect(() => {
     fetchDashboardData();
@@ -303,7 +330,7 @@ const DashboardPage: React.FC = () => {
                     variant="outlined"
                     fullWidth
                     startIcon={<PeopleIcon />}
-                    onClick={() => navigate('/users/list')}
+                    onClick={() => handleMenuNavigation('/users/list')}
                     sx={{ mb: 1 }}
                   >
                     사용자 관리
@@ -314,7 +341,7 @@ const DashboardPage: React.FC = () => {
                     variant="outlined"
                     fullWidth
                     startIcon={<BusinessIcon />}
-                    onClick={() => navigate('/users/company')}
+                    onClick={() => handleMenuNavigation('/users/company')}
                     sx={{ mb: 1 }}
                   >
                     회사 관리
@@ -325,7 +352,7 @@ const DashboardPage: React.FC = () => {
                     variant="outlined"
                     fullWidth
                     startIcon={<SecurityIcon />}
-                    onClick={() => navigate('/permissions/menu')}
+                    onClick={() => handleMenuNavigation('/permissions/menu')}
                     sx={{ mb: 1 }}
                   >
                     권한 관리
@@ -336,7 +363,7 @@ const DashboardPage: React.FC = () => {
                     variant="outlined"
                     fullWidth
                     startIcon={<AssignmentIcon />}
-                    onClick={() => navigate('/accounting/invoices')}
+                    onClick={() => handleMenuNavigation('/accounting/invoices')}
                     sx={{ mb: 1 }}
                   >
                     송장 관리

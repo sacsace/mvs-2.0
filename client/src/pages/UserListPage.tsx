@@ -391,12 +391,35 @@ const UserListPage: React.FC = () => {
   const getRoleLabel = (role: string) => {
     switch (role) {
       case 'admin':
-        return t('admin');
+        return 'Administrator';
       case 'root':
-        return t('root');
+        return 'System Administrator';
+      case 'audit':
+        return 'Auditor';
       default:
-        return t('regular');
+        return 'User';
     }
+  };
+
+  // 권한에 따라 역할 표시 여부 결정
+  const canViewRole = (userRole: string) => {
+    if (!currentUser) return false;
+    
+    // root는 모든 역할 볼 수 있음
+    if (currentUser.role === 'root') return true;
+    
+    // admin은 자신과 같거나 낮은 레벨만 볼 수 있음 (admin, user)
+    if (currentUser.role === 'admin') {
+      return userRole === 'admin' || userRole === 'user';
+    }
+    
+    // audit는 자신과 admin, user만 볼 수 있음
+    if (currentUser.role === 'audit') {
+      return userRole === 'audit' || userRole === 'admin' || userRole === 'user';
+    }
+    
+    // 일반 사용자는 역할을 볼 수 없음
+    return false;
   };
 
 
@@ -553,12 +576,21 @@ const UserListPage: React.FC = () => {
                     <TableCell sx={{ border: 0, fontSize: '0.75rem', py: 0.7, color: '#6b7a90' }}>{user.userid}</TableCell>
                     <TableCell sx={{ border: 0, fontSize: '0.75rem', py: 0.7, color: '#6b7a90' }}>{user.username}</TableCell>
                     <TableCell sx={{ border: 0, py: 0.7 }}>
-                      <Chip
-                        label={getRoleLabel(user.role)}
-                        color={getRoleColor(user.role) as any}
-                        size="small"
-                        sx={{ fontSize: '0.65rem', height: 20 }}
-                      />
+                      {canViewRole(user.role) ? (
+                        <Chip
+                          label={getRoleLabel(user.role)}
+                          color={getRoleColor(user.role) as any}
+                          size="small"
+                          sx={{ fontSize: '0.65rem', height: 20 }}
+                        />
+                      ) : (
+                        <Chip
+                          label="제한됨"
+                          color="default"
+                          size="small"
+                          sx={{ fontSize: '0.65rem', height: 20, opacity: 0.6 }}
+                        />
+                      )}
                     </TableCell>
                     <TableCell sx={{ border: 0, fontSize: '0.75rem', py: 0.7, color: '#6b7a90' }}>{user.company?.name || '-'}</TableCell>
                     <TableCell sx={{ border: 0, fontSize: '0.75rem', py: 0.7, color: '#6b7a90' }}>
@@ -883,12 +915,21 @@ const UserListPage: React.FC = () => {
                   <Typography variant="body2" sx={{ fontSize: '0.75rem', color: '#666', mb: 0.5 }}>
                     {t('userId')}: {viewingUser.userid}
                   </Typography>
-                  <Chip
-                        label={getRoleLabel(viewingUser.role)}
-                        color={getRoleColor(viewingUser.role) as any}
-                        size="small"
-                        sx={{ fontSize: '0.75rem' }}
-                      />
+                  {canViewRole(viewingUser.role) ? (
+                    <Chip
+                      label={getRoleLabel(viewingUser.role)}
+                      color={getRoleColor(viewingUser.role) as any}
+                      size="small"
+                      sx={{ fontSize: '0.75rem' }}
+                    />
+                  ) : (
+                    <Chip
+                      label="제한됨"
+                      color="default"
+                      size="small"
+                      sx={{ fontSize: '0.75rem', opacity: 0.6 }}
+                    />
+                  )}
                     </Box>
                   </Box>
                 </Grid>
