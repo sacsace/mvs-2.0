@@ -405,10 +405,14 @@ const Dashboard: React.FC = () => {
     console.log('원본 회사명:', companyName);
     
     const result = companyName
-      .replace(/\s*private\s*limi?te?d\s*/gi, '')  // Private Limited, Private Limtied 등 철자 오류 포함
-      .replace(/\s*pvt\.?\s*ltd?\.?\s*/gi, '')     // Pvt Ltd, Pvt. Ltd., Pvt Lt 등
-      .replace(/\s*limi?te?d\s*/gi, '')           // Limited, Limtied, Limted 등 철자 오류 포함
-      .replace(/\s*ltd?\.?\s*/gi, '')             // Ltd, Ltd., Lt 등
+      .replace(/\s*private\s*limtied\s*/gi, '')       // Private Limtied (정확한 철자 오류)
+      .replace(/\s*private\s*limited\s*/gi, '')       // Private Limited (정확한 철자)
+      .replace(/\s*private\s*lim[it]*e?d\s*/gi, '')   // Private Limited의 다른 변형들
+      .replace(/\s*limtied\s*/gi, '')                 // Limtied (단독)
+      .replace(/\s*limited\s*/gi, '')                 // Limited (단독)
+      .replace(/\s*pvt\.?\s*ltd?\.?\s*/gi, '')        // Pvt Ltd, Pvt. Ltd., Pvt Lt 등
+      .replace(/\s*lim[it]*e?d\s*/gi, '')             // Limited의 기타 변형들
+      .replace(/\s*ltd?\.?\s*/gi, '')                 // Ltd, Ltd., Lt 등
       .trim();
     
     console.log('처리된 회사명:', result);
