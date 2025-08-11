@@ -401,10 +401,10 @@ const Dashboard: React.FC = () => {
   const getDisplayCompanyName = (companyName: string): string => {
     if (!companyName) return 'MSV';
     return companyName
-      .replace(/\s*private\s*limited\s*/gi, '')  // Private Limited
-      .replace(/\s*pvt\.?\s*ltd\.?\s*/gi, '')    // Pvt Ltd, Pvt. Ltd.
-      .replace(/\s*limited\s*/gi, '')           // Limited
-      .replace(/\s*ltd\.?\s*/gi, '')            // Ltd, Ltd.
+      .replace(/\s*private\s*limi?te?d\s*/gi, '')  // Private Limited, Private Limtied 등 철자 오류 포함
+      .replace(/\s*pvt\.?\s*ltd?\.?\s*/gi, '')     // Pvt Ltd, Pvt. Ltd., Pvt Lt 등
+      .replace(/\s*limi?te?d\s*/gi, '')           // Limited, Limtied, Limted 등 철자 오류 포함
+      .replace(/\s*ltd?\.?\s*/gi, '')             // Ltd, Ltd., Lt 등
       .trim();
   };
 
