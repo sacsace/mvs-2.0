@@ -4,7 +4,7 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "cd server && (npm run update-menus || echo 'Menu update skipped') && node dist/index.js",
+    "startCommand": "cd server && (npm run init-if-empty || echo 'Init check skipped') && (npm run update-menus || echo 'Menu update skipped') && node dist/index.js",
     "healthcheckPath": "/api/init/health",
     "healthcheckTimeout": 120,
     "restartPolicyType": "ON_FAILURE",
