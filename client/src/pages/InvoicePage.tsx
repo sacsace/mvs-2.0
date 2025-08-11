@@ -1994,7 +1994,7 @@ const InvoicePage: React.FC = () => {
                 <TableRow sx={{ border: 0, background: '#f7fafd' }}>
                   <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>Invoice No.</TableCell>
                   <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>Type</TableCell>
-                  <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>Partner</TableCell>
+                  <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>Customer</TableCell>
                   <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>Amount</TableCell>
                   <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>Status</TableCell>
                   <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>Issue Date</TableCell>
@@ -2180,10 +2180,10 @@ const InvoicePage: React.FC = () => {
 
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth sx={{ mb: 2 }}>
-                  <InputLabel sx={{ fontSize: '0.75rem' }}>Partner</InputLabel>
+                  <InputLabel sx={{ fontSize: '0.75rem' }}>Customer</InputLabel>
                   <Select
                     value={formData.partner_company_id.toString()}
-                    label="Partner"
+                    label="Customer"
                     onChange={(e) => setFormData({ ...formData, partner_company_id: parseInt(e.target.value) })}
                     sx={{ 
                       '& .MuiSelect-select': { fontSize: '0.75rem' },
@@ -2488,7 +2488,7 @@ const InvoicePage: React.FC = () => {
               <Grid container spacing={2} sx={{ mt: 1 }}>
                 <Grid item xs={12} sm={6}>
                   <Typography variant="body2" sx={{ fontSize: '0.75rem', fontWeight: 500, mb: 0.5 }}>
-                    Partner
+                    Customer
                   </Typography>
                   <Typography variant="body2" sx={{ fontSize: '0.75rem', color: '#666' }}>
                     {viewingInvoice.partnerCompany?.name || '-'}
@@ -2792,10 +2792,10 @@ const InvoicePage: React.FC = () => {
                   {invoiceFormData.customer_input_type === 'existing' && (
                     <>
                       <FormControl fullWidth size="small" sx={{ mb: 1 }}>
-                        <InputLabel sx={{ fontSize: '0.65rem' }}>Select Partner</InputLabel>
+                        <InputLabel sx={{ fontSize: '0.65rem' }}>Select Customer</InputLabel>
                         <Select
                           value={invoiceFormData.partner_company_id.toString()}
-                          label="Select Partner"
+                          label="Select Customer"
                           onChange={(e) => setInvoiceFormData({ ...invoiceFormData, partner_company_id: parseInt(e.target.value) })}
                           sx={{ '& .MuiSelect-select': { fontSize: '0.65rem' } }}
                         >
