@@ -263,7 +263,7 @@ const MenuPermissionPage: React.FC = () => {
       const token = localStorage.getItem('token');
       console.log('토큰:', token ? '존재함' : '없음');
       
-      const response = await fetch('/api/menus/tree', {
+      const response = await fetch('/api/menu/tree', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -466,7 +466,7 @@ const MenuPermissionPage: React.FC = () => {
   const handleSaveMenuAdd = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/menus', {
+      const response = await fetch('/api/menu', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -505,7 +505,7 @@ const MenuPermissionPage: React.FC = () => {
       const token = localStorage.getItem('token');
       console.log('토큰 존재:', !!token);
       
-      const response = await fetch(`/api/menus/${menu.menu_id}/move-up`, {
+      const response = await fetch(`/api/menu/${menu.menu_id}/move-up`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -541,7 +541,7 @@ const MenuPermissionPage: React.FC = () => {
       const token = localStorage.getItem('token');
       console.log('토큰 존재:', !!token);
       
-      const response = await fetch(`/api/menus/${menu.menu_id}/move-down`, {
+      const response = await fetch(`/api/menu/${menu.menu_id}/move-down`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -581,7 +581,7 @@ const MenuPermissionPage: React.FC = () => {
       console.log('영문명 값:', editFormData.name_en);
       console.log('========================');
       
-      const response = await fetch(`/api/menus/${editMenu.menu_id}`, {
+      const response = await fetch(`/api/menu/${editMenu.menu_id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -610,7 +610,7 @@ const MenuPermissionPage: React.FC = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/menus/${menuToDelete.menu_id}`, {
+      const response = await fetch(`/api/menu/${menuToDelete.menu_id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

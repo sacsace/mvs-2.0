@@ -363,14 +363,8 @@ const CompanyPage: React.FC = () => {
         console.log('받은 회사 데이터:', data);
         console.log('회사 개수:', data.length);
         
-        // MVS 고객회사만 필터링 (partner_type이 null, 빈 문자열, 'customer', 'both'인 경우)
-        let filteredCompanies = data.filter((company: Company) => {
-          const partnerType = company.partner_type;
-          return !partnerType || 
-                 partnerType === 'customer' || 
-                 partnerType === 'both' ||
-                 (partnerType as string) === '';
-        });
+        // 모든 회사 표시 (partner_type 필터링 제거)
+        let filteredCompanies = data;
         
         console.log('MVS 고객회사 필터링 후:', filteredCompanies.length, '개');
         

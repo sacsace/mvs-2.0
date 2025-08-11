@@ -172,13 +172,13 @@ router.get('/', authenticateJWT, async (req: any, res) => {
 
     let whereCondition: any = { is_deleted: false };
 
-    // MVS 시스템을 이용하는 고객회사만 필터링 (partner_type이 null, 빈 문자열, 'customer', 'both'인 경우)
-    whereCondition[Op.or] = [
-      { partner_type: null },
-      { partner_type: '' },
-      { partner_type: 'customer' },
-      { partner_type: 'both' }
-    ];
+    // 모든 회사 표시 (partner_type 필터링 제거)
+    // whereCondition[Op.or] = [
+    //   { partner_type: null },
+    //   { partner_type: '' },
+    //   { partner_type: 'customer' },
+    //   { partner_type: 'both' }
+    // ];
 
     // 권한에 따른 필터링
     if (currentUser?.role !== 'root' && currentUser?.role !== 'audit') {
