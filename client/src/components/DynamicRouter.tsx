@@ -24,7 +24,7 @@ const DynamicRouter: React.FC = () => {
   useEffect(() => {
     const fetchMenus = async () => {
       try {
-        const response = await axios.get('/api/menus');
+        const response = await axios.get('/api/menu');
         if (response.data.success) {
           setMenus(response.data.data);
         }

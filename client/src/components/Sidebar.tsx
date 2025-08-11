@@ -226,7 +226,7 @@ const Sidebar: React.FC = () => {
     const fetchMenus = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await axios.get('/api/menus', {
+        const response = await axios.get('/api/menu', {
           headers: {
             'Authorization': `Bearer ${token}`,
           },

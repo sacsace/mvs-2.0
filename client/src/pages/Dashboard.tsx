@@ -169,7 +169,7 @@ const Dashboard: React.FC = () => {
       const token = localStorage.getItem('token');
       console.log('메뉴 조회 시작, 토큰:', token ? '존재함' : '없음');
       
-      const url = '/api/menus/tree';
+      const url = '/api/menu/tree';
       console.log('API URL:', url);
       
       console.log('fetch 요청 시작...');
