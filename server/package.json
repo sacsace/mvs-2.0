@@ -17,6 +17,7 @@
     "check-db": "ts-node src/scripts/checkDatabase.ts",
     "init-db": "ts-node src/scripts/initializeDatabase.ts",
     "update-menus": "ts-node src/scripts/updateProductionMenus.ts",
+    "init-system": "ts-node src/scripts/initializeWithoutConstraints.ts",
     "postbuild": "npm run update-menus"
   },
   "dependencies": {

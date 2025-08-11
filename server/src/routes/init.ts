@@ -1,20 +1,12 @@
 import { Router } from 'express';
-import Company from '../models/Company';
-import CompanyGst from '../models/CompanyGst';
 import User from '../models/User';
-import Role from '../models/Role';
-import Permission from '../models/Permission';
-import sequelize from '../config/database';
-import bcrypt from 'bcryptjs';
 import logger from '../utils/logger';
-import Menu from '../models/Menu';
 
 const router = Router();
 
 // 헬스체크 엔드포인트
 router.get('/health', (req, res) => {
   try {
-    // 간단한 헬스체크 - 데이터베이스 연결 없이도 응답
     res.status(200).json({ 
       status: 'healthy', 
       timestamp: new Date().toISOString(),
@@ -32,192 +24,45 @@ router.get('/health', (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
-  const transaction = await sequelize.transaction();
-
+// 시스템 초기화 상태 확인
+router.get('/status', async (req, res) => {
   try {
-    const { company, admin, gstData, menus, roles, permissions } = req.body;
-    logger.info('Initializing system with comprehensive company, admin, and configuration data', { 
-      companyName: company.name,
-      adminUsername: admin.username,
-      adminUserId: admin.userid 
-    });
-
-    // 기존 사용자 존재 여부 확인
-    const existingUsers = await User.count({ where: { is_deleted: false } });
-    if (existingUsers > 0) {
-      await transaction.rollback();
-      logger.warn('Initialization attempted but users already exist', { userCount: existingUsers });
-      return res.status(400).json({
-        success: false,
-        message: '이미 사용자가 존재합니다. 시스템이 이미 초기화되었습니다.',
-        error: 'ALREADY_INITIALIZED'
-      });
-    }
-
-    // 1. 회사 정보 생성
-    const newCompany = await Company.create({
-      name: company.name,
-      coi: company.business_number,
-      representative_name: company.representative_name,
-      address: company.address,
-      phone: company.phone,
-      email: company.email,
-      website: company.website,
-      pan: company.pan,
-      iec: company.iec,
-      msme: company.msme,
-      bank_name: company.bank_name,
-      account_holder: company.account_holder,
-      account_number: company.account_number,
-      ifsc_code: company.ifsc_code,
-      partner_type: company.partner_type,
-      product_category: company.product_category,
-      login_period_start: company.login_period_start,
-      login_period_end: company.login_period_end,
-    }, { transaction });
-
-    logger.info('Company created successfully', { companyId: newCompany.company_id });
-
-    // 2. GST 정보 생성
-    if (Array.isArray(gstData) && gstData.length > 0) {
-      const gstRows = gstData.map((gst: any) => ({
-        company_id: newCompany.company_id,
-        gst_number: gst.gst_number,
-        address: gst.address,
-        is_primary: gst.is_primary,
-      }));
-      await CompanyGst.bulkCreate(gstRows, { transaction });
-      logger.info('GST data created successfully', { count: gstRows.length });
-    }
-
-    // 3. 관리자 계정 생성
-    const hashedPassword = await bcrypt.hash(admin.password, 10);
-    const newUser = await User.create({
-      userid: admin.userid,
-      username: admin.username,
-      password: hashedPassword,
-      company_id: newCompany.company_id,
-      role: 'admin',
-      default_language: admin.default_language || 'ko',
-    }, { transaction });
-
-    logger.info('Admin user created successfully', { userId: newUser.id });
-
-    // 4. 역할 데이터 저장
-    if (Array.isArray(roles) && roles.length > 0) {
-      const existingRoles = await Role.count({ transaction });
-      
-      if (existingRoles === 0) {
-        const roleRows = roles.map((role: any) => ({
-          name: role.name,
-          name_en: role.name_en,
-          description: role.description,
-          description_en: role.description_en,
-          level: role.level,
-          company_access: role.company_access,
-          is_active: true,
-        }));
-        await Role.bulkCreate(roleRows, { transaction });
-        logger.info('Roles created successfully', { count: roleRows.length });
-      } else {
-        logger.info('Roles already exist, skipping creation', { count: existingRoles });
-      }
-    }
-
-    // 5. 권한 데이터 저장
-    if (Array.isArray(permissions) && permissions.length > 0) {
-      const existingPermissions = await Permission.count({ transaction });
-      
-      if (existingPermissions === 0) {
-        const permissionRows = permissions.map((permission: any) => ({
-          name: permission.name,
-          description: permission.description,
-          level: permission.level,
-          company_access: permission.company_access,
-        }));
-        await Permission.bulkCreate(permissionRows, { transaction });
-        logger.info('Permissions created successfully', { count: permissionRows.length });
-      } else {
-        logger.info('Permissions already exist, skipping creation', { count: existingPermissions });
-      }
-    }
-
-    // 6. 메뉴 데이터 저장
-    if (Array.isArray(menus) && menus.length > 0) {
-      const existingMenus = await Menu.count({ transaction });
-      
-      if (existingMenus === 0) {
-        logger.info('Creating menus sequentially for proper parent-child relationships');
-        
-        // 임시 ID -> 실제 menu_id 매핑
-        const menuIdMapping: { [key: number]: number } = {};
-        
-        // 순차적으로 메뉴 생성 (부모 메뉴 먼저 생성)
-        for (const menu of menus) {
-          const realParentId = menu.parent_id ? menuIdMapping[menu.parent_id] : null;
-          
-          const createdMenu = await Menu.create({
-            name: menu.name,
-            name_en: menu.name_en || menu.name,
-            icon: menu.icon,
-            order_num: menu.order || menu.order_num,
-            parent_id: realParentId,
-            url: menu.url || null,
-            create_date: new Date(),
-          }, { transaction });
-          
-          // 임시 ID와 실제 ID 매핑 저장
-          menuIdMapping[menu.id] = createdMenu.menu_id;
-          
-          logger.info(`Menu created: ${menu.name} (ID: ${createdMenu.menu_id})`);
-        }
-        
-        logger.info('Menus created successfully', { count: menus.length });
-      } else {
-        logger.info('Menus already exist, skipping creation', { count: existingMenus });
-      }
-    }
-
-    await transaction.commit();
-    logger.info('System initialization completed successfully with all components');
-    res.json({ 
-      success: true, 
-      message: '시스템이 성공적으로 초기화되었습니다.',
-      data: {
-        company: {
-          id: newCompany.company_id,
-          name: newCompany.name
-        },
-        admin: {
-          id: newUser.id,
-          userid: newUser.userid,
-          username: newUser.username
-        }
-      }
+    const userCount = await User.count({ where: { is_deleted: false } });
+    const isInitialized = userCount > 0;
+    
+    res.json({
+      success: true,
+      initialized: isInitialized,
+      userCount,
+      message: isInitialized 
+        ? '시스템이 이미 초기화되었습니다.' 
+        : '시스템 초기화가 필요합니다. initializeSystemData.ts 스크립트를 실행하세요.'
     });
   } catch (error) {
-    await transaction.rollback();
-    logger.error('Initialization error:', { 
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined
-    });
-    res.status(500).json({ 
-      success: false, 
-      message: '시스템 초기화 중 오류가 발생했습니다.',
-      error: error instanceof Error ? error.message : 'Unknown error'
+    logger.error('시스템 상태 확인 중 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '시스템 상태 확인 중 오류가 발생했습니다.'
     });
   }
 });
 
-// 사용자 존재 여부 확인 API
+// 사용자 존재 여부 확인 (기존 호환성 유지)
 router.get('/has-user', async (req, res) => {
   try {
-    const count = await User.count({ where: { is_deleted: false } });
-    res.json({ hasUser: count > 0 });
+    const userCount = await User.count({ where: { is_deleted: false } });
+    res.json({
+      success: true,
+      hasUser: userCount > 0,
+      userCount
+    });
   } catch (error) {
-    res.status(500).json({ hasUser: false, error: 'DB error' });
+    logger.error('사용자 존재 여부 확인 중 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '사용자 존재 여부 확인 중 오류가 발생했습니다.'
+    });
   }
 });
 
-export default router; 
+export default router;
