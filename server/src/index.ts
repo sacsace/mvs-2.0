@@ -64,7 +64,7 @@ app.use('/api/init', initRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/users', userRouter);
 app.use('/api/companies', companyRouter);
-app.use('/api/menus', menuRouter);
+app.use('/api/menu', menuRouter);
 app.use('/api/menu-permissions', menuPermissionRouter);
 app.use('/api/permissions', permissionRouter);
 app.use('/api/user-permissions', userPermissionRouter);
