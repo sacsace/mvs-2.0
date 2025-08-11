@@ -239,10 +239,8 @@ const UserListPage: React.FC = () => {
       editableRole = 'admin'; // audit는 root 사용자를 admin으로만 변경 가능
     }
     
-    // 역할이 root나 audit이 아닌 경우 현재 사용자의 회사로 자동 설정
-    const defaultCompanyId = (editableRole !== 'root' && editableRole !== 'audit') 
-      ? (currentUser?.company_id || 1) 
-      : user.company_id;
+    // 사용자 수정 시에는 원래 사용자의 회사를 기본값으로 설정
+    const defaultCompanyId = user.company_id;
     
     setFormData({
       userid: user.userid,
@@ -753,12 +751,19 @@ const UserListPage: React.FC = () => {
                   console.log('현재 사용자 역할:', currentUser?.role);
                   
                   try {
-                    // 역할이 root나 audit이 아닌 경우 현재 사용자의 회사로 자동 설정
-                    const newCompanyId = (newRole !== 'root' && newRole !== 'audit') 
-                      ? (currentUser?.company_id || 1) 
-                      : formData.company_id;
+                    // 사용자 추가 모드에서만 역할에 따라 회사 자동 설정
+                    // 사용자 수정 모드에서는 기존 회사 유지
+                    let newCompanyId = formData.company_id;
+                    
+                    if (!editingUser) {
+                      // 추가 모드: 역할이 root나 audit이 아닌 경우 현재 사용자의 회사로 자동 설정
+                      newCompanyId = (newRole !== 'root' && newRole !== 'audit') 
+                        ? (currentUser?.company_id || 1) 
+                        : formData.company_id;
+                    }
                     
                     console.log('새 회사 ID:', newCompanyId);
+                    console.log('편집 모드:', editingUser ? '수정' : '추가');
                     
                     setFormData({ 
                       ...formData, 
