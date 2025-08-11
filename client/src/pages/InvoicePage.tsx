@@ -1124,14 +1124,24 @@ const InvoicePage: React.FC = () => {
     return { totalSubtotal, totalTaxAmount, totalAmount };
   };
 
+  // 빈 서비스 항목을 필터링하는 함수
+  const filterNonEmptyItems = (items: any[]) => {
+    return items.filter(item => 
+      item.description && 
+      item.description.trim() !== '' && 
+      (item.unit_price > 0 || item.quantity > 0)
+    );
+  };
+
   // PDF 생성 및 다운로드 함수
   const generatePDF = async () => {
     try {
       // 서비스 항목을 10개씩 분할하는 함수
       const renderPagedTable = (items: any[]) => {
+        const filteredItems = filterNonEmptyItems(items);
         const pages = [];
-        for (let i = 0; i < items.length; i += 10) {
-          const pageItems = items.slice(i, i + 10);
+        for (let i = 0; i < filteredItems.length; i += 10) {
+          const pageItems = filteredItems.slice(i, i + 10);
           const pageNumber = Math.floor(i / 10) + 1;
           
           pages.push(`
@@ -1462,9 +1472,10 @@ const InvoicePage: React.FC = () => {
     try {
       // 서비스 항목을 10개씩 분할하는 함수
       const renderPagedTable = (items: any[]) => {
+        const filteredItems = filterNonEmptyItems(items);
         const pages = [];
-        for (let i = 0; i < items.length; i += 10) {
-          const pageItems = items.slice(i, i + 10);
+        for (let i = 0; i < filteredItems.length; i += 10) {
+          const pageItems = filteredItems.slice(i, i + 10);
           const pageNumber = Math.floor(i / 10) + 1;
           
           pages.push(`
