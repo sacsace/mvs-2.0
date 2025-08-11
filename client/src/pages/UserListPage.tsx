@@ -825,7 +825,7 @@ const UserListPage: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, company_id: parseInt(e.target.value) })}
                 disabled={
                   editingUser 
-                    ? (currentUser?.role === 'admin' || formData.role !== 'root' && formData.role !== 'audit') // 수정 시: admin이거나 root/audit이 아닌 역할은 회사 변경 불가
+                    ? (currentUser?.role === 'admin' && formData.role !== 'root' && formData.role !== 'audit') // 수정 시: admin 사용자는 root/audit 역할이 아닌 경우에만 회사 변경 불가
                     : (currentUser?.role !== 'root' && formData.role !== 'root' && formData.role !== 'audit') // 추가 시: root가 아닌 사용자는 root/audit 역할이 아닐 때 회사 변경 불가
                 }
                 sx={{ 
@@ -850,13 +850,13 @@ const UserListPage: React.FC = () => {
               
               {/* 회사 선택 도움말 */}
               {(editingUser 
-                ? (currentUser?.role === 'admin' || formData.role !== 'root' && formData.role !== 'audit') 
+                ? (currentUser?.role === 'admin' && formData.role !== 'root' && formData.role !== 'audit') 
                 : (currentUser?.role !== 'root' && formData.role !== 'root' && formData.role !== 'audit')
               ) && (
                 <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#666', mt: 0.5 }}>
-                  {currentUser?.role === 'root' 
-                    ? 'System Administrator와 Auditor 역할만 회사를 선택할 수 있습니다.'
-                    : 'Administrator와 User 역할은 현재 사용자의 회사로 자동 설정됩니다.'
+                  {currentUser?.role === 'admin' 
+                    ? 'Administrator 권한으로는 System Administrator와 Auditor 역할의 회사만 변경할 수 있습니다.'
+                    : 'System Administrator와 Auditor 역할만 회사를 선택할 수 있습니다.'
                   }
                 </Typography>
               )}
