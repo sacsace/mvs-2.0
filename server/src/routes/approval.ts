@@ -113,7 +113,20 @@ router.get('/', authenticateJWT, async (req: Request & { user?: any }, res: Resp
       console.log(`  - ${approval.title} (요청자: ${approval.requester?.username}, 승인자: ${approval.approver?.username})`);
     });
 
-    res.json({ success: true, data: approvals });
+    // 받은 결제 요청의 경우, 읽음/읽지 않음 정보 제공을 위해 사용자의 마지막 확인 시간 포함
+    let userLastCheck = null;
+    if (type === 'received') {
+      const userInfo = await User.findByPk(currentUser.id, {
+        attributes: ['last_notification_check']
+      });
+      userLastCheck = userInfo?.last_notification_check;
+    }
+
+    res.json({ 
+      success: true, 
+      data: approvals,
+      userLastCheck: userLastCheck 
+    });
   } catch (error) {
     logger.error('결제 요청 목록 조회 오류:', error);
     res.status(500).json({ success: false, message: '결제 요청 목록 조회 중 오류가 발생했습니다.' });

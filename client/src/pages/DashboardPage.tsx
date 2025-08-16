@@ -92,6 +92,7 @@ const DashboardPage: React.FC<DashboardProps> = ({ menus, onMenuSelect }) => {
   const [userName, setUserName] = useState<string>('');
   const [receivedApprovals, setReceivedApprovals] = useState<Approval[]>([]);
   const [requestedApprovals, setRequestedApprovals] = useState<Approval[]>([]);
+  const [userLastCheck, setUserLastCheck] = useState<Date | null>(null);
 
   // 메뉴 URL로 메뉴 객체 찾기
   const findMenuByUrl = (url: string): MenuItem | undefined => {
@@ -144,6 +145,7 @@ const DashboardPage: React.FC<DashboardProps> = ({ menus, onMenuSelect }) => {
         const receivedData = await receivedResponse.json();
         if (receivedData.success) {
           setReceivedApprovals(receivedData.data.slice(0, 5));
+          setUserLastCheck(receivedData.userLastCheck ? new Date(receivedData.userLastCheck) : null);
         }
       }
 
@@ -286,6 +288,13 @@ const DashboardPage: React.FC<DashboardProps> = ({ menus, onMenuSelect }) => {
     }
   };
 
+  // 읽지 않은 결제인지 판단
+  const isUnreadApproval = (approvalCreatedAt: string) => {
+    if (!userLastCheck) return true; // 한 번도 확인하지 않았으면 읽지 않음
+    const createdDate = new Date(approvalCreatedAt);
+    return createdDate > userLastCheck;
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -420,7 +429,7 @@ const DashboardPage: React.FC<DashboardProps> = ({ menus, onMenuSelect }) => {
                 </Typography>
                 <Button 
                   size="small" 
-                  onClick={() => handleMenuNavigation('/approval')}
+                  onClick={() => handleMenuNavigation('/approval?type=received')}
                   sx={{ fontSize: '0.8rem' }}
                 >
                   전체보기
@@ -438,7 +447,7 @@ const DashboardPage: React.FC<DashboardProps> = ({ menus, onMenuSelect }) => {
                         '&:hover': { backgroundColor: '#f5f5f5' },
                         borderRadius: 1
                       }}
-                      onClick={() => handleMenuNavigation('/approval')}
+                      onClick={() => handleMenuNavigation('/approval?type=received')}
                     >
                       <ListItemAvatar>
                         <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
@@ -448,9 +457,29 @@ const DashboardPage: React.FC<DashboardProps> = ({ menus, onMenuSelect }) => {
                       <ListItemText
                         primary={
                           <Box display="flex" alignItems="center" gap={1}>
-                            <Typography variant="body2" noWrap sx={{ flex: 1 }}>
-                              {approval.title}
-                            </Typography>
+                            <Box display="flex" alignItems="center" gap={0.5}>
+                              {isUnreadApproval(approval.created_at) && (
+                                <Box 
+                                  sx={{ 
+                                    width: 8, 
+                                    height: 8, 
+                                    borderRadius: '50%', 
+                                    bgcolor: 'error.main',
+                                    flexShrink: 0
+                                  }} 
+                                />
+                              )}
+                              <Typography 
+                                variant="body2" 
+                                noWrap 
+                                sx={{ 
+                                  flex: 1,
+                                  fontWeight: isUnreadApproval(approval.created_at) ? 'bold' : 'normal'
+                                }}
+                              >
+                                {approval.title}
+                              </Typography>
+                            </Box>
                             <Chip 
                               label={getStatusText(approval.status)}
                               color={getStatusColor(approval.status) as any}
@@ -460,7 +489,11 @@ const DashboardPage: React.FC<DashboardProps> = ({ menus, onMenuSelect }) => {
                           </Box>
                         }
                         secondary={
-                          <Typography variant="caption" color="text.secondary">
+                          <Typography 
+                            variant="caption" 
+                            color="text.secondary"
+                            sx={{ fontWeight: isUnreadApproval(approval.created_at) ? 'bold' : 'normal' }}
+                          >
                             요청자: {approval.requester.username} • {formatDate(approval.created_at)}
                           </Typography>
                         }
@@ -489,7 +522,7 @@ const DashboardPage: React.FC<DashboardProps> = ({ menus, onMenuSelect }) => {
                 </Typography>
                 <Button 
                   size="small" 
-                  onClick={() => handleMenuNavigation('/approval')}
+                  onClick={() => handleMenuNavigation('/approval?type=requested')}
                   sx={{ fontSize: '0.8rem' }}
                 >
                   전체보기
@@ -507,7 +540,7 @@ const DashboardPage: React.FC<DashboardProps> = ({ menus, onMenuSelect }) => {
                         '&:hover': { backgroundColor: '#f5f5f5' },
                         borderRadius: 1
                       }}
-                      onClick={() => handleMenuNavigation('/approval')}
+                      onClick={() => handleMenuNavigation('/approval?type=requested')}
                     >
                       <ListItemAvatar>
                         <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -87,6 +88,7 @@ interface User {
 }
 
 const ApprovalPage: React.FC = () => {
+  const location = useLocation();
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
@@ -101,6 +103,15 @@ const ApprovalPage: React.FC = () => {
   const [reassignNote, setReassignNote] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'requested' | 'received'>('requested');
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+
+  // URL 파라미터에서 type 확인하여 필터 설정
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const type = searchParams.get('type');
+    if (type === 'received' || type === 'requested') {
+      setFilterType(type);
+    }
+  }, [location.search]);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false,
     message: '',
