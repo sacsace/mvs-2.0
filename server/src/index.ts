@@ -116,4 +116,15 @@ app.listen(PORT, '0.0.0.0', async () => {
 }).on('error', (error) => {
   logger.error(`❌ Server failed to start:`, error);
   process.exit(1);
+});
+
+// Graceful shutdown handling for Railway
+process.on('SIGTERM', () => {
+  logger.info('🔄 SIGTERM received, shutting down gracefully');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  logger.info('🔄 SIGINT received, shutting down gracefully');
+  process.exit(0);
 }); 

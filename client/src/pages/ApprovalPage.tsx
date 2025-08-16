@@ -220,16 +220,21 @@ const ApprovalPage: React.FC = () => {
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem('token');
+      console.log('🔍 사용자 목록 조회 시작');
       const response = await axios.get('/api/approval/users/company', {
         headers: { Authorization: `Bearer ${token}` },
       });
 
+      console.log('📊 API 응답:', response.data);
+
       if (response.data.success) {
         const allUsers = response.data.data;
+        console.log('👥 전체 사용자:', allUsers);
         setUsers(allUsers);
         
         // 결제 승인자는 현재 사용자와 같거나 상위 권한자여야 함
         if (currentUser) {
+          console.log('👤 현재 사용자:', currentUser);
           const approverCandidates = allUsers.filter((user: any) => {
             // 자신 제외
             if (user.id === currentUser.id) return false;
@@ -248,14 +253,17 @@ const ApprovalPage: React.FC = () => {
             return userLevel >= currentUserLevel;
           });
           
-          console.log('승인자 후보:', approverCandidates);
+          console.log('✅ 승인자 후보:', approverCandidates);
           setFilteredUsers(approverCandidates);
         } else {
+          console.log('⚠️ 현재 사용자 정보 없음 - 전체 사용자 사용');
           setFilteredUsers(allUsers);
         }
+      } else {
+        console.error('❌ API 응답 실패:', response.data);
       }
     } catch (error) {
-      console.error('사용자 목록 조회 오류:', error);
+      console.error('❌ 사용자 목록 조회 오류:', error);
     }
   };
 
@@ -310,6 +318,10 @@ const ApprovalPage: React.FC = () => {
 
       if (response.data.success) {
         setSelectedApproval(response.data.data);
+        
+        // 재배정을 위한 사용자 목록 새로고침
+        await fetchUsers();
+        
         setViewDialogOpen(true);
         // 코멘트 로드
         fetchComments(approval.id);
@@ -889,7 +901,11 @@ const ApprovalPage: React.FC = () => {
                         getOptionLabel={(option) => `${option.username} (${option.userid})`}
                         value={filteredUsers.find(user => user.id.toString() === reassignUserId) || null}
                         onChange={(event, newValue) => {
+                          console.log('🔄 재배정 사용자 선택:', newValue);
                           setReassignUserId(newValue ? newValue.id.toString() : '');
+                        }}
+                        onOpen={() => {
+                          console.log('📋 재배정 드롭다운 열림 - 사용 가능한 옵션:', filteredUsers);
                         }}
                         renderInput={(params) => (
                           <TextField

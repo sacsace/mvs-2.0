@@ -1,1 +1,1 @@
-web: cd server && node dist/index.js 
+web: cd server && node --max-old-space-size=512 dist/index.js 
