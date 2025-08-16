@@ -1446,37 +1446,37 @@ const Dashboard: React.FC = () => {
       // 다른 메뉴 페이지
       if (currentMenu) {
         // 사용자 목록 페이지
-        if (currentMenu.url === '/users/list') {
+        if (currentMenu.url === '/users/list' || currentMenu.url === '/users' || currentMenu.name === '사용자 목록' || currentMenu.name === 'User List') {
           return <UserListPage />;
         }
 
         // 메뉴 권한 관리 페이지
-        if (currentMenu.url === '/permissions/menu') {
+        if (currentMenu.url === '/permissions/menu' || currentMenu.name === '메뉴 권한 관리' || currentMenu.name === 'Menu Permission Management') {
           return <MenuPermissionPage />;
         }
 
         // 회사정보 관리 페이지
-        if (currentMenu.url === '/users/company') {
+        if (currentMenu.url === '/users/company' || currentMenu.url === '/company' || currentMenu.name === '회사 정보 관리' || currentMenu.name === 'Company Information') {
           return <CompanyPage />;
         }
 
         // 협력 업체 관리 페이지
-        if (currentMenu.url === '/users/partners') {
+        if (currentMenu.url === '/users/partners' || currentMenu.url === '/partners' || currentMenu.name === '파트너 업체 관리' || currentMenu.name === 'Partner Management') {
           return <PartnerPage />;
         }
 
         // 전자 결제 페이지
-        if (currentMenu.url === '/approval') {
+        if (currentMenu.url === '/approval' || currentMenu.name === '전자결재' || currentMenu.name === 'Electronic Approval') {
           return <ApprovalPage />;
         }
 
         // 매입/매출 통계 페이지
-        if (currentMenu.url === '/accounting/statistics') {
+        if (currentMenu.url === '/accounting/statistics' || currentMenu.name === '매입/매출 통계' || currentMenu.name === 'Accounting Statistics') {
           return <AccountingStatisticsPage />;
         }
 
         // 매출 관리 페이지
-        if (currentMenu.url === '/accounting/invoices') {
+        if (currentMenu.url === '/accounting/invoices' || currentMenu.url === '/invoices' || currentMenu.name === '매출 관리' || currentMenu.name === 'Invoice Management') {
           return <InvoicePage />;
         }
 
