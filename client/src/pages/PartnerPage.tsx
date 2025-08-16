@@ -57,7 +57,7 @@ interface Partner {
   partner_id: number;
   company_id: number;
   name: string;
-  partner_type: 'supplier' | 'customer' | 'both';
+  partner_type: 'supplier' | 'customer' | 'both' | '';
   coi?: string;
   pan?: string;
   gst1?: string;
@@ -301,7 +301,10 @@ const PartnerPage: React.FC = () => {
       return;
     }
 
-    if (!formData.partner_type || formData.partner_type === '') {
+    if (!formData.partner_type || 
+        (formData.partner_type !== 'supplier' && 
+         formData.partner_type !== 'customer' && 
+         formData.partner_type !== 'both')) {
       setError('파트너 타입(공급업체 또는 고객회사)을 반드시 선택해주세요.');
       return;
     }
@@ -641,10 +644,10 @@ const PartnerPage: React.FC = () => {
                 display: 'flex', 
                 gap: 2, 
                 alignItems: 'center',
-                border: !formData.partner_type ? '1px solid #f44336' : '1px solid #e0e0e0',
+                border: (formData.partner_type === '' || !formData.partner_type) ? '1px solid #f44336' : '1px solid #e0e0e0',
                 borderRadius: 1,
                 p: 1,
-                backgroundColor: !formData.partner_type ? '#ffebee' : 'transparent'
+                backgroundColor: (formData.partner_type === '' || !formData.partner_type) ? '#ffebee' : 'transparent'
               }}>
                 <FormControlLabel
                   control={
@@ -669,7 +672,7 @@ const PartnerPage: React.FC = () => {
                   sx={{ fontSize: '0.75rem' }}
                 />
               </Box>
-              {!formData.partner_type && (
+              {(formData.partner_type === '' || !formData.partner_type) && (
                 <Typography variant="caption" sx={{ color: '#f44336', fontSize: '0.7rem', mt: 0.5, display: 'block' }}>
                   공급업체 또는 고객회사를 반드시 선택해주세요.
                 </Typography>
