@@ -72,6 +72,28 @@ app.use('/api/partners', partnerRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/e-invoice', einvoiceRouter);
 
+// Railway 헬스체크 대응 - 추가 엔드포인트
+app.get('/', (req, res) => {
+  logger.info(`🏠 ROOT 경로 접근: ${req.ip} at ${new Date().toISOString()}`);
+  res.status(200).json({
+    status: 'healthy',
+    message: 'MVS 2.0 Server is running',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV
+  });
+});
+
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    message: 'MVS 2.0 Server is running',  
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV
+  });
+});
+
 // 프로덕션에서 클라이언트 라우팅 처리
 if (process.env.NODE_ENV === 'production') {
   app.get('*', (req, res) => {
