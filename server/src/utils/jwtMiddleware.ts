@@ -38,7 +38,7 @@ export async function checkLoginPeriod(req: Request, res: Response, next: NextFu
     const [companyResult] = await sequelize.query(`
       SELECT login_period_start, login_period_end 
       FROM company 
-      WHERE company_id = ? AND is_deleted = 0
+      WHERE company_id = ? AND is_deleted = false
     `, {
       replacements: [user.company_id],
       type: QueryTypes.SELECT

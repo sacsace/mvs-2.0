@@ -14,7 +14,7 @@ async function checkTableStructure() {
     // 회사 데이터 확인 (raw query)
     console.log('\n현재 회사 데이터:');
     console.log('===============');
-    const companies = await sequelize.query("SELECT * FROM company WHERE is_deleted = 0;");
+    const companies = await sequelize.query("SELECT * FROM company WHERE is_deleted = false;");
     console.log(companies[0]);
 
   } catch (error) {

@@ -21,7 +21,7 @@ async function checkDatabase() {
     // user 테이블이 있는지 확인
     const userTable = tables.find(t => t.name === 'user');
     if (userTable) {
-      const [userCount] = await sequelize.query('SELECT COUNT(*) as count FROM user WHERE is_deleted = 0');
+      const [userCount] = await sequelize.query('SELECT COUNT(*) as count FROM user WHERE is_deleted = false');
       console.log('User count:', userCount[0].count);
     } else {
       console.log('User table not found');
@@ -30,7 +30,7 @@ async function checkDatabase() {
     // company 테이블이 있는지 확인
     const companyTable = tables.find(t => t.name === 'company');
     if (companyTable) {
-      const [companyCount] = await sequelize.query('SELECT COUNT(*) as count FROM company WHERE is_deleted = 0');
+      const [companyCount] = await sequelize.query('SELECT COUNT(*) as count FROM company WHERE is_deleted = false');
       console.log('Company count:', companyCount[0].count);
     } else {
       console.log('Company table not found');
