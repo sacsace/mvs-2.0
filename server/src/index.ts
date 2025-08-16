@@ -118,6 +118,13 @@ app.listen(PORT, '0.0.0.0', async () => {
   process.exit(1);
 });
 
+// 메모리 최적화
+setInterval(() => {
+  if (global.gc) {
+    global.gc();
+  }
+}, 30000); // 30초마다 가비지 컬렉션
+
 // Graceful shutdown handling for Railway
 process.on('SIGTERM', () => {
   logger.info('🔄 SIGTERM received, shutting down gracefully');
@@ -127,4 +134,13 @@ process.on('SIGTERM', () => {
 process.on('SIGINT', () => {
   logger.info('🔄 SIGINT received, shutting down gracefully');
   process.exit(0);
-}); 
+});
+
+// 메모리 사용량 모니터링
+setInterval(() => {
+  const memUsage = process.memoryUsage();
+  const memMB = Math.round(memUsage.rss / 1024 / 1024);
+  if (memMB > 200) { // 200MB 이상일 때 경고
+    logger.warn(`높은 메모리 사용량: ${memMB}MB`);
+  }
+}, 60000); // 1분마다 체크 
