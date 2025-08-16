@@ -170,10 +170,28 @@ async function updateProductionMenus() {
 
     console.log('📋 현재 메뉴 상태 확인 중...');
     
-    // 테이블 존재 여부 확인
+    // 테이블 존재 여부 확인 (데이터베이스별 호환)
     try {
-      const [results] = await sequelize.query("SELECT name FROM sqlite_master WHERE type='table' AND name='menu';");
-      if (!results || (results as any[]).length === 0) {
+      let menuTableExists = false;
+      const dialect = sequelize.getDialect();
+      
+      if (dialect === 'postgres') {
+        // PostgreSQL용 쿼리
+        const [results] = await sequelize.query(`
+          SELECT table_name 
+          FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_type = 'BASE TABLE'
+          AND table_name = 'menu'
+        `);
+        menuTableExists = (results as any[]).length > 0;
+      } else {
+        // SQLite용 쿼리
+        const [results] = await sequelize.query("SELECT name FROM sqlite_master WHERE type='table' AND name='menu';");
+        menuTableExists = (results as any[]).length > 0;
+      }
+      
+      if (!menuTableExists) {
         console.log('⚠️  메뉴 테이블이 존재하지 않습니다. 초기화가 필요합니다.');
         console.log('💡 시스템이 아직 초기화되지 않았습니다.');
         console.log('   프로덕션 환경에서는 자동으로 테이블이 생성됩니다.');
