@@ -1,5 +1,6 @@
 import User from './User';
 import Company from './Company';
+import Partner from './Partner';
 import Menu from './Menu';
 import MenuPermission from './MenuPermission';
 import Permission from './Permission';

@@ -1,35 +1,18 @@
 import express, { Request, Response } from 'express';
 import { authenticateJWT } from '../utils/jwtMiddleware';
-import Company from '../models/Company';
+import Partner from '../models/Partner';
 import logger from '../utils/logger';
 
 const router = express.Router();
 
-// 파트너사 목록 조회 (로그인한 회사의 파트너사만, 본사 제외)
+// 파트너사 목록 조회
 router.get('/', authenticateJWT, async (req: Request, res: Response) => {
   try {
-    const userCompanyId = req.user?.company_id;
-    const userRole = req.user?.role;
-
-    if (!userCompanyId) {
-      return res.status(400).json({ error: '회사 정보가 없습니다.' });
-    }
-
-    // 파트너사는 partner_company_id가 로그인한 회사 ID인 회사들 (본사 제외)
-    let whereClause: any = { 
-      partner_company_id: userCompanyId,
-      company_id: { [require('sequelize').Op.ne]: userCompanyId } // 본사 제외
-    };
-
-    // root와 audit는 모든 파트너사를 볼 수 있음 (본사 제외)
-    if (userRole === 'root' || userRole === 'audit') {
-      whereClause = { 
-        company_id: { [require('sequelize').Op.ne]: userCompanyId } // 본사 제외
-      };
-    }
-
-    const partners = await Company.findAll({
-      where: whereClause,
+    // 삭제되지 않은 활성 파트너만 조회
+    const partners = await Partner.findAll({
+      where: { 
+        is_deleted: false 
+      },
       order: [['name', 'ASC']]
     });
 
@@ -43,45 +26,33 @@ router.get('/', authenticateJWT, async (req: Request, res: Response) => {
 // 특정 파트너사 조회
 router.get('/:id', authenticateJWT, async (req: Request, res: Response) => {
   try {
-    const userCompanyId = req.user?.company_id;
-    const userRole = req.user?.role;
     const { id } = req.params;
 
-    const partner = await Company.findByPk(id);
+    const partner = await Partner.findOne({
+      where: {
+        partner_id: id,
+        is_deleted: false
+      }
+    });
 
     if (!partner) {
       return res.status(404).json({ error: '파트너사를 찾을 수 없습니다.' });
     }
 
-    // 권한 검사
-    if (userRole !== 'root' && userRole !== 'audit') {
-      if (partner.partner_company_id !== userCompanyId) {
-        return res.status(403).json({ error: '접근 권한이 없습니다.' });
-      }
-    }
-
     res.json(partner);
   } catch (error) {
     logger.error('Error fetching partner:', error);
-    res.status(500).json({ error: '파트너사를 불러오는데 실패했습니다.' });
+    res.status(500).json({ error: '파트너사 정보를 불러오는데 실패했습니다.' });
   }
 });
 
-    // 파트너사 추가
+// 파트너사 추가
 router.post('/', authenticateJWT, async (req: Request, res: Response) => {
   try {
-    const userCompanyId = req.user?.company_id;
-    const userRole = req.user?.role;
-
-    // 권한 검사
-    if (userRole !== 'root' && userRole !== 'admin' && userRole !== 'audit') {
-      return res.status(403).json({ error: '파트너사를 추가할 권한이 없습니다.' });
-    }
-
     const {
       name,
+      partner_type,
       coi,
-      address,
       pan,
       gst1,
       gst2,
@@ -93,37 +64,56 @@ router.post('/', authenticateJWT, async (req: Request, res: Response) => {
       account_holder,
       account_number,
       ifsc_code,
-      partner_type,
-      product_category
+      address,
+      website,
+      email,
+      phone,
+      product_category,
+      contact_person,
+      contact_designation,
+      contact_phone,
+      contact_email,
+      payment_terms,
+      credit_limit
     } = req.body;
 
     // 필수 필드 검증
-    if (!name || !coi || !address) {
-      return res.status(400).json({ error: '회사명, COI, 주소는 필수 입력 항목입니다.' });
+    if (!name || !partner_type) {
+      return res.status(400).json({ error: '파트너사명과 파트너 타입은 필수입니다.' });
     }
 
-    // 파트너사 생성 (partner_company_id는 로그인한 회사 ID)
-    const partner = await Company.create({
+    const newPartner = await Partner.create({
       name,
+      partner_type,
       coi,
+      pan,
+      gst1,
+      gst2,
+      gst3,
+      gst4,
+      iec,
+      msme,
+      bank_name,
+      account_holder,
+      account_number,
+      ifsc_code,
       address,
-      pan: pan || null,
-      gst1: gst1 || null,
-      gst2: gst2 || null,
-      gst3: gst3 || null,
-      gst4: gst4 || null,
-      iec: iec || null,
-      msme: msme || null,
-      bank_name: bank_name || null,
-      account_holder: account_holder || null,
-      account_number: account_number || null,
-      ifsc_code: ifsc_code || null,
-      partner_company_id: userCompanyId,
-      partner_type: partner_type || null,
-      product_category: product_category || null
+      website,
+      email,
+      phone,
+      product_category,
+      contact_person,
+      contact_designation,
+      contact_phone,
+      contact_email,
+      payment_terms,
+      credit_limit: credit_limit || 0,
+      is_active: true,
+      is_deleted: false
     });
 
-    res.status(201).json(partner);
+    logger.info(`New partner created: ${newPartner.name}`);
+    res.status(201).json(newPartner);
   } catch (error) {
     logger.error('Error creating partner:', error);
     res.status(500).json({ error: '파트너사 추가에 실패했습니다.' });
@@ -133,105 +123,62 @@ router.post('/', authenticateJWT, async (req: Request, res: Response) => {
 // 파트너사 수정
 router.put('/:id', authenticateJWT, async (req: Request, res: Response) => {
   try {
-    const userCompanyId = req.user?.company_id;
-    const userRole = req.user?.role;
     const { id } = req.params;
+    const updateData = req.body;
 
-    // 권한 검사
-    if (userRole !== 'root' && userRole !== 'admin' && userRole !== 'audit') {
-      return res.status(403).json({ error: '파트너사를 수정할 권한이 없습니다.' });
-    }
+    // partner_id는 수정 불가
+    delete updateData.partner_id;
+    delete updateData.create_date;
 
-    const partner = await Company.findByPk(id);
-    if (!partner) {
+    // update_date 설정
+    updateData.update_date = new Date();
+
+    const [updatedRowsCount] = await Partner.update(updateData, {
+      where: {
+        partner_id: id,
+        is_deleted: false
+      }
+    });
+
+    if (updatedRowsCount === 0) {
       return res.status(404).json({ error: '파트너사를 찾을 수 없습니다.' });
     }
 
-    // 권한 검사 (admin과 regular는 자사의 협력 업체만 수정 가능)
-    if (userRole !== 'root' && userRole !== 'audit') {
-      if (partner.partner_company_id !== userCompanyId) {
-        return res.status(403).json({ error: '접근 권한이 없습니다.' });
-      }
-    }
-
-    const {
-      name,
-      coi,
-      address,
-      pan,
-      gst1,
-      gst2,
-      gst3,
-      gst4,
-      iec,
-      msme,
-      bank_name,
-      account_holder,
-      account_number,
-      ifsc_code,
-      partner_type,
-      product_category
-    } = req.body;
-
-    // 필수 필드 검증
-    if (!name || !coi || !address) {
-      return res.status(400).json({ error: '회사명, COI, 주소는 필수 입력 항목입니다.' });
-    }
-
-    // 파트너사 업데이트
-    await partner.update({
-      name,
-      coi,
-      address,
-      pan: pan || null,
-      gst1: gst1 || null,
-      gst2: gst2 || null,
-      gst3: gst3 || null,
-      gst4: gst4 || null,
-      iec: iec || null,
-      msme: msme || null,
-      bank_name: bank_name || null,
-      account_holder: account_holder || null,
-      account_number: account_number || null,
-      ifsc_code: ifsc_code || null,
-      partner_type: partner_type || null,
-      product_category: product_category || null
-    });
-
-    res.json(partner);
+    // 수정된 파트너사 정보 반환
+    const updatedPartner = await Partner.findByPk(id);
+    
+    logger.info(`Partner updated: ${updatedPartner?.name}`);
+    res.json(updatedPartner);
   } catch (error) {
     logger.error('Error updating partner:', error);
     res.status(500).json({ error: '파트너사 수정에 실패했습니다.' });
   }
 });
 
-// 파트너사 삭제
+// 파트너사 삭제 (소프트 삭제)
 router.delete('/:id', authenticateJWT, async (req: Request, res: Response) => {
   try {
-    const userCompanyId = req.user?.company_id;
-    const userRole = req.user?.role;
     const { id } = req.params;
 
-    // 권한 검사
-    if (userRole !== 'root' && userRole !== 'admin' && userRole !== 'audit') {
-      return res.status(403).json({ error: '파트너사를 삭제할 권한이 없습니다.' });
-    }
+    const [updatedRowsCount] = await Partner.update(
+      { 
+        is_deleted: true,
+        is_active: false,
+        update_date: new Date()
+      },
+      {
+        where: {
+          partner_id: id,
+          is_deleted: false
+        }
+      }
+    );
 
-    const partner = await Company.findByPk(id);
-    if (!partner) {
+    if (updatedRowsCount === 0) {
       return res.status(404).json({ error: '파트너사를 찾을 수 없습니다.' });
     }
 
-    // 권한 검사 (admin과 regular는 자사의 파트너사만 삭제 가능)
-    if (userRole !== 'root' && userRole !== 'audit') {
-      if (partner.partner_company_id !== userCompanyId) {
-        return res.status(403).json({ error: '접근 권한이 없습니다.' });
-      }
-    }
-
-    // 파트너사 삭제
-    await partner.destroy();
-
+    logger.info(`Partner soft deleted: ID ${id}`);
     res.json({ message: '파트너사가 삭제되었습니다.' });
   } catch (error) {
     logger.error('Error deleting partner:', error);
@@ -239,4 +186,59 @@ router.delete('/:id', authenticateJWT, async (req: Request, res: Response) => {
   }
 });
 
-export default router; 
+// 파트너사 활성화/비활성화
+router.patch('/:id/toggle-status', authenticateJWT, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { is_active } = req.body;
+
+    const [updatedRowsCount] = await Partner.update(
+      { 
+        is_active: is_active,
+        update_date: new Date()
+      },
+      {
+        where: {
+          partner_id: id,
+          is_deleted: false
+        }
+      }
+    );
+
+    if (updatedRowsCount === 0) {
+      return res.status(404).json({ error: '파트너사를 찾을 수 없습니다.' });
+    }
+
+    logger.info(`Partner status toggled: ID ${id}, active: ${is_active}`);
+    res.json({ message: '파트너사 상태가 변경되었습니다.' });
+  } catch (error) {
+    logger.error('Error toggling partner status:', error);
+    res.status(500).json({ error: '파트너사 상태 변경에 실패했습니다.' });
+  }
+});
+
+// 파트너 타입별 조회
+router.get('/type/:type', authenticateJWT, async (req: Request, res: Response) => {
+  try {
+    const { type } = req.params;
+
+    if (!['supplier', 'customer', 'both'].includes(type)) {
+      return res.status(400).json({ error: '올바르지 않은 파트너 타입입니다.' });
+    }
+
+    const partners = await Partner.findAll({
+      where: { 
+        partner_type: type,
+        is_deleted: false 
+      },
+      order: [['name', 'ASC']]
+    });
+
+    res.json(partners);
+  } catch (error) {
+    logger.error('Error fetching partners by type:', error);
+    res.status(500).json({ error: '파트너사 목록을 불러오는데 실패했습니다.' });
+  }
+});
+
+export default router;

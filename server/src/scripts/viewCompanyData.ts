@@ -32,8 +32,7 @@ async function viewCompanyData() {
         console.log(`   주소: ${company.address}`);
         console.log(`   이메일: ${company.email}`);
         console.log(`   전화: ${company.phone}`);
-        console.log(`   파트너 타입: ${company.partner_type}`);
-        console.log(`   제품 카테고리: ${company.product_category}`);
+        // 파트너 관련 정보는 별도 Partner 테이블로 분리됨
         console.log(`   삭제됨: ${company.is_deleted}`);
       });
     }

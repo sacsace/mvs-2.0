@@ -1,10 +1,11 @@
 import { Model, DataTypes } from 'sequelize';
 import sequelize from '../config/database';
 
-class Company extends Model {
-  public company_id!: number;
+class Partner extends Model {
+  public partner_id!: number;
   public name!: string;
-  public coi!: string;
+  public partner_type!: 'supplier' | 'customer' | 'both';
+  public coi?: string;
   public pan?: string;
   public gst1?: string;
   public gst2?: string;
@@ -20,18 +21,22 @@ class Company extends Model {
   public website?: string;
   public email?: string;
   public phone?: string;
-  public signature_url?: string;
-  public stamp_url?: string;
-  public login_period_start?: string;
-  public login_period_end?: string;
+  public product_category?: string;
+  public contact_person?: string;
+  public contact_designation?: string;
+  public contact_phone?: string;
+  public contact_email?: string;
+  public payment_terms?: string;
+  public credit_limit?: number;
+  public is_active!: boolean;
   public is_deleted!: boolean;
   public create_date!: Date;
   public update_date!: Date;
 }
 
-Company.init(
+Partner.init(
   {
-    company_id: {
+    partner_id: {
       type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true,
@@ -40,10 +45,14 @@ Company.init(
       type: DataTypes.STRING(100),
       allowNull: false,
     },
+    partner_type: {
+      type: DataTypes.ENUM('supplier', 'customer', 'both'),
+      allowNull: false,
+      defaultValue: 'customer',
+    },
     coi: {
       type: DataTypes.STRING(30),
-      allowNull: false,
-      unique: true,
+      allowNull: true,
     },
     pan: {
       type: DataTypes.STRING(20),
@@ -79,7 +88,7 @@ Company.init(
       type: DataTypes.STRING(20),
     },
     address: {
-      type: DataTypes.STRING(255),
+      type: DataTypes.TEXT,
     },
     website: {
       type: DataTypes.STRING(255),
@@ -90,19 +99,31 @@ Company.init(
     phone: {
       type: DataTypes.STRING(20),
     },
-    signature_url: {
-      type: DataTypes.STRING(500),
+    product_category: {
+      type: DataTypes.TEXT,
     },
-    stamp_url: {
-      type: DataTypes.STRING(500),
+    contact_person: {
+      type: DataTypes.STRING(100),
     },
-    login_period_start: {
-      type: DataTypes.DATEONLY,
-      allowNull: true,
+    contact_designation: {
+      type: DataTypes.STRING(50),
     },
-    login_period_end: {
-      type: DataTypes.DATEONLY,
-      allowNull: true,
+    contact_phone: {
+      type: DataTypes.STRING(20),
+    },
+    contact_email: {
+      type: DataTypes.STRING(100),
+    },
+    payment_terms: {
+      type: DataTypes.STRING(100),
+    },
+    credit_limit: {
+      type: DataTypes.DECIMAL(15, 2),
+      defaultValue: 0,
+    },
+    is_active: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
     },
     is_deleted: {
       type: DataTypes.BOOLEAN,
@@ -119,10 +140,10 @@ Company.init(
   },
   {
     sequelize,
-    modelName: 'Company',
-    tableName: 'company',
+    modelName: 'Partner',
+    tableName: 'partners',
     timestamps: false,
   }
 );
 
-export default Company; 
+export default Partner;

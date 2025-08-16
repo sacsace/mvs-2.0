@@ -2,6 +2,7 @@ import { Sequelize, ModelStatic, Model } from 'sequelize';
 import config from '../config';
 import Company from './Company';
 import CompanyGst from './CompanyGst';
+import Partner from './Partner';
 import User from './User';
 import Menu from './Menu';
 import MenuPermission from './MenuPermission';
@@ -31,6 +32,7 @@ interface DbModels {
   Sequelize: typeof Sequelize;
   Company: typeof Company;
   CompanyGst: typeof CompanyGst;
+  Partner: typeof Partner;
   User: typeof User;
   Menu: typeof Menu;
   MenuPermission: typeof MenuPermission;
@@ -49,6 +51,7 @@ const db: DbModels = {
   Sequelize,
   Company,
   CompanyGst,
+  Partner,
   User,
   Menu,
   MenuPermission,

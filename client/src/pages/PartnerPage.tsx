@@ -54,10 +54,10 @@ const formatAccountNumber = (value: string): string => {
 };
 
 interface Partner {
-  company_id: number;
+  partner_id: number;
   name: string;
-  coi: string;
-  address: string;
+  partner_type: 'supplier' | 'customer' | 'both';
+  coi?: string;
   pan?: string;
   gst1?: string;
   gst2?: string;
@@ -69,8 +69,19 @@ interface Partner {
   account_holder?: string;
   account_number?: string;
   ifsc_code?: string;
-  partner_type?: 'supplier' | 'customer' | 'both';
+  address?: string;
+  website?: string;
+  email?: string;
+  phone?: string;
   product_category?: string;
+  contact_person?: string;
+  contact_designation?: string;
+  contact_phone?: string;
+  contact_email?: string;
+  payment_terms?: string;
+  credit_limit?: number;
+  is_active: boolean;
+  is_deleted: boolean;
   create_date: string;
   update_date?: string;
 }
@@ -255,14 +266,14 @@ const PartnerPage: React.FC = () => {
   // 파트너사 삭제
   const handleDeletePartner = (partner: Partner) => {
     if (window.confirm(`"${partner.name}" 파트너사를 삭제하시겠습니까?`)) {
-      deletePartner(partner.company_id);
+      deletePartner(partner.partner_id);
     }
   };
 
-  const deletePartner = async (companyId: number) => {
+  const deletePartner = async (partnerId: number) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/partners/${companyId}`, {
+      const response = await fetch(`/api/partners/${partnerId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -286,7 +297,7 @@ const PartnerPage: React.FC = () => {
     try {
       const token = localStorage.getItem('token');
       const url = isEditing && selectedPartner 
-        ? `/api/partners/${selectedPartner.company_id}` 
+        ? `/api/partners/${selectedPartner.partner_id}` 
         : '/api/partners';
       const method = isEditing ? 'PUT' : 'POST';
 
@@ -508,7 +519,7 @@ const PartnerPage: React.FC = () => {
             ) : (
               filteredPartners.map((partner) => (
                 <TableRow 
-                  key={partner.company_id} 
+                  key={partner.partner_id} 
                   hover 
                   onClick={() => handleViewPartner(partner)}
                   sx={{ cursor: 'pointer' }}
