@@ -115,7 +115,7 @@ const PartnerPage: React.FC = () => {
     account_holder: '',
     account_number: '',
     ifsc_code: '',
-    partner_type: undefined as 'supplier' | 'customer' | 'both' | undefined,
+    partner_type: '' as 'supplier' | 'customer' | 'both' | '',
     product_category: ''
   });
 
@@ -225,7 +225,7 @@ const PartnerPage: React.FC = () => {
       account_holder: '',
       account_number: '',
       ifsc_code: '',
-      partner_type: undefined,
+      partner_type: '',
       product_category: ''
     });
     setIsEditing(false);
@@ -295,6 +295,17 @@ const PartnerPage: React.FC = () => {
 
   // 협력 업체 저장
   const handleSavePartner = async () => {
+    // 필수 필드 검증
+    if (!formData.name.trim()) {
+      setError('파트너사명을 입력해주세요.');
+      return;
+    }
+
+    if (!formData.partner_type || formData.partner_type === '') {
+      setError('파트너 타입(공급업체 또는 고객회사)을 반드시 선택해주세요.');
+      return;
+    }
+
     try {
       const token = localStorage.getItem('token');
       const url = isEditing && selectedPartner 
@@ -336,7 +347,7 @@ const PartnerPage: React.FC = () => {
 
   const handleSupplierChange = (checked: boolean) => {
     const currentType = formData.partner_type;
-    let newType: 'supplier' | 'customer' | 'both' | undefined;
+    let newType: 'supplier' | 'customer' | 'both' | '';
 
     if (checked) {
       if (isCustomer(currentType)) {
@@ -348,7 +359,7 @@ const PartnerPage: React.FC = () => {
       if (isCustomer(currentType)) {
         newType = 'customer';
       } else {
-        newType = undefined;
+        newType = '';
       }
     }
 
@@ -357,7 +368,7 @@ const PartnerPage: React.FC = () => {
 
   const handleCustomerChange = (checked: boolean) => {
     const currentType = formData.partner_type;
-    let newType: 'supplier' | 'customer' | 'both' | undefined;
+    let newType: 'supplier' | 'customer' | 'both' | '';
 
     if (checked) {
       if (isSupplier(currentType)) {
@@ -369,7 +380,7 @@ const PartnerPage: React.FC = () => {
       if (isSupplier(currentType)) {
         newType = 'supplier';
       } else {
-        newType = undefined;
+        newType = '';
       }
     }
 
@@ -623,7 +634,18 @@ const PartnerPage: React.FC = () => {
               />
             </Grid>
             <Grid item xs={12}>
-              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              <Typography variant="subtitle2" sx={{ fontSize: '0.75rem', fontWeight: 600, mb: 1 }}>
+                파트너 타입 <span style={{ color: 'red' }}>*</span>
+              </Typography>
+              <Box sx={{ 
+                display: 'flex', 
+                gap: 2, 
+                alignItems: 'center',
+                border: !formData.partner_type ? '1px solid #f44336' : '1px solid #e0e0e0',
+                borderRadius: 1,
+                p: 1,
+                backgroundColor: !formData.partner_type ? '#ffebee' : 'transparent'
+              }}>
                 <FormControlLabel
                   control={
                     <Checkbox
@@ -647,6 +669,11 @@ const PartnerPage: React.FC = () => {
                   sx={{ fontSize: '0.75rem' }}
                 />
               </Box>
+              {!formData.partner_type && (
+                <Typography variant="caption" sx={{ color: '#f44336', fontSize: '0.7rem', mt: 0.5, display: 'block' }}>
+                  공급업체 또는 고객회사를 반드시 선택해주세요.
+                </Typography>
+              )}
             </Grid>
             <Grid item xs={12}>
               <TextField

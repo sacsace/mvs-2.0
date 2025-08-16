@@ -57,7 +57,6 @@ Partner.init(
     partner_type: {
       type: DataTypes.ENUM('supplier', 'customer', 'both'),
       allowNull: false,
-      defaultValue: 'customer',
     },
     coi: {
       type: DataTypes.STRING(30),

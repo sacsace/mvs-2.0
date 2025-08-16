@@ -102,8 +102,12 @@ router.post('/', authenticateJWT, async (req: Request, res: Response) => {
     } = req.body;
 
     // 필수 필드 검증
-    if (!name || !partner_type) {
-      return res.status(400).json({ error: '파트너사명과 파트너 타입은 필수입니다.' });
+    if (!name) {
+      return res.status(400).json({ error: '파트너사명은 필수입니다.' });
+    }
+    
+    if (!partner_type || !['supplier', 'customer', 'both'].includes(partner_type)) {
+      return res.status(400).json({ error: '파트너 타입(공급업체 또는 고객회사)을 반드시 선택해야 합니다.' });
     }
 
     const newPartner = await Partner.create({
