@@ -361,6 +361,35 @@ const UserPage: React.FC = () => {
         <Box display="flex" justifyContent="center" alignItems="center" minHeight={200}>
           <CircularProgress size={18} />
         </Box>
+      ) : users.length === 0 ? (
+        <Paper sx={{ 
+          boxShadow: '0 4px 24px rgba(25, 118, 210, 0.10)', 
+          borderRadius: 3, 
+          border: '1px solid #e3eafc',
+          p: 4,
+          textAlign: 'center'
+        }}>
+          <Typography 
+            variant="h6" 
+            sx={{ 
+              color: '#8b95a1',
+              fontSize: '1rem',
+              fontWeight: 500,
+              mb: 1 
+            }}
+          >
+            사용자가 없습니다
+          </Typography>
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              color: '#8b95a1',
+              fontSize: '0.875rem' 
+            }}
+          >
+            내 회사에 등록된 사용자가 없습니다. 새 사용자를 추가해보세요.
+          </Typography>
+        </Paper>
       ) : (
         <TableContainer component={Paper} sx={{ boxShadow: '0 4px 24px rgba(25, 118, 210, 0.10)', borderRadius: 3, border: '1px solid #e3eafc' }}>
           <Table size="small">

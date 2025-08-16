@@ -562,82 +562,110 @@ const UserListPage: React.FC = () => {
           <Typography variant="h6" sx={{ mb: 2, fontWeight: 700, fontSize: '0.85rem', letterSpacing: 0.5, p: 2, pb: 0 }}>
             {t('userList')}
           </Typography>
-          <TableContainer component={Paper} variant="outlined" sx={{ boxShadow: 'none', borderRadius: 0, border: 'none' }}>
-            <Table size="small">
-              <TableHead>
-                <TableRow sx={{ border: 0, background: '#f7fafd' }}>
-                  <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>{t('userId')}</TableCell>
-                  <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>{t('username')}</TableCell>
-                  <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>{t('role')}</TableCell>
-                  <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>{t('company')}</TableCell>
-                  <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>{t('createDate')}</TableCell>
-                  <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>{t('updateDate')}</TableCell>
-                  <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>{t('actions')}</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {paginatedUsers.map((user) => (
-                  <TableRow 
-                    key={user.id} 
-                    hover 
-                    onClick={() => handleViewUser(user)}
-                    sx={{ cursor: 'pointer', border: 0 }}
-                  >
-                    <TableCell sx={{ border: 0, fontSize: '0.75rem', py: 0.7, color: '#6b7a90' }}>{user.userid}</TableCell>
-                    <TableCell sx={{ border: 0, fontSize: '0.75rem', py: 0.7, color: '#6b7a90' }}>{user.username}</TableCell>
-                    <TableCell sx={{ border: 0, py: 0.7 }}>
-                      {canViewRole(user.role) ? (
-                        <Chip
-                          label={getRoleLabel(user.role)}
-                          color={getRoleColor(user.role) as any}
-                          size="small"
-                          sx={{ fontSize: '0.65rem', height: 20 }}
-                        />
-                      ) : (
-                        <Chip
-                          label="제한됨"
-                          color="default"
-                          size="small"
-                          sx={{ fontSize: '0.65rem', height: 20, opacity: 0.6 }}
-                        />
-                      )}
-                    </TableCell>
-                    <TableCell sx={{ border: 0, fontSize: '0.75rem', py: 0.7, color: '#6b7a90' }}>{user.company?.name || '-'}</TableCell>
-                    <TableCell sx={{ border: 0, fontSize: '0.75rem', py: 0.7, color: '#6b7a90' }}>
-                      {new Date(user.create_date).toLocaleDateString('ko-KR')}
-                    </TableCell>
-                    <TableCell sx={{ border: 0, fontSize: '0.75rem', py: 0.7, color: '#6b7a90' }}>
-                      {new Date(user.update_date).toLocaleDateString('ko-KR')}
-                    </TableCell>
-                    <TableCell sx={{ border: 0, py: 0.7 }}>
-                      <Box sx={{ display: 'flex', gap: 1 }}>
-                        <Tooltip title={t('edit')}>
-                          <IconButton
-                            size="small"
-                            onClick={(e) => { e.stopPropagation(); handleEditUser(user); }}
-                            disabled={currentUser?.role !== 'root' && currentUser?.role !== 'admin' && currentUser?.role !== 'audit'}
-                            sx={{ p: 0.5, color: '#666', '&:hover': { color: '#1976d2', backgroundColor: 'rgba(25, 118, 210, 0.1)' } }}
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title={t('delete')}>
-                          <IconButton
-                            size="small"
-                            onClick={(e) => { e.stopPropagation(); handleDeleteUser(user.id); }}
-                            disabled={currentUser?.role !== 'root' && currentUser?.role !== 'admin' && currentUser?.role !== 'audit'}
-                            sx={{ p: 0.5, color: '#666', '&:hover': { color: '#d32f2f', backgroundColor: 'rgba(211, 47, 47, 0.1)' } }}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    </TableCell>
+          {paginatedUsers.length === 0 ? (
+            <Box sx={{ 
+              p: 4,
+              textAlign: 'center'
+            }}>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  color: '#8b95a1',
+                  fontSize: '1rem',
+                  fontWeight: 500,
+                  mb: 1 
+                }}
+              >
+                사용자가 없습니다
+              </Typography>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  color: '#8b95a1',
+                  fontSize: '0.875rem' 
+                }}
+              >
+                내 회사에 등록된 사용자가 없습니다. 새 사용자를 추가해보세요.
+              </Typography>
+            </Box>
+          ) : (
+            <TableContainer component={Paper} variant="outlined" sx={{ boxShadow: 'none', borderRadius: 0, border: 'none' }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ border: 0, background: '#f7fafd' }}>
+                    <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>{t('userId')}</TableCell>
+                    <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>{t('username')}</TableCell>
+                    <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>{t('role')}</TableCell>
+                    <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>{t('company')}</TableCell>
+                    <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>{t('createDate')}</TableCell>
+                    <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>{t('updateDate')}</TableCell>
+                    <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>{t('actions')}</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {paginatedUsers.map((user) => (
+                    <TableRow 
+                      key={user.id} 
+                      hover 
+                      onClick={() => handleViewUser(user)}
+                      sx={{ cursor: 'pointer', border: 0 }}
+                    >
+                      <TableCell sx={{ border: 0, fontSize: '0.75rem', py: 0.7, color: '#6b7a90' }}>{user.userid}</TableCell>
+                      <TableCell sx={{ border: 0, fontSize: '0.75rem', py: 0.7, color: '#6b7a90' }}>{user.username}</TableCell>
+                      <TableCell sx={{ border: 0, py: 0.7 }}>
+                        {canViewRole(user.role) ? (
+                          <Chip
+                            label={getRoleLabel(user.role)}
+                            color={getRoleColor(user.role) as any}
+                            size="small"
+                            sx={{ fontSize: '0.65rem', height: 20 }}
+                          />
+                        ) : (
+                          <Chip
+                            label="제한됨"
+                            color="default"
+                            size="small"
+                            sx={{ fontSize: '0.65rem', height: 20, opacity: 0.6 }}
+                          />
+                        )}
+                      </TableCell>
+                      <TableCell sx={{ border: 0, fontSize: '0.75rem', py: 0.7, color: '#6b7a90' }}>{user.company?.name || '-'}</TableCell>
+                      <TableCell sx={{ border: 0, fontSize: '0.75rem', py: 0.7, color: '#6b7a90' }}>
+                        {new Date(user.create_date).toLocaleDateString('ko-KR')}
+                      </TableCell>
+                      <TableCell sx={{ border: 0, fontSize: '0.75rem', py: 0.7, color: '#6b7a90' }}>
+                        {new Date(user.update_date).toLocaleDateString('ko-KR')}
+                      </TableCell>
+                      <TableCell sx={{ border: 0, py: 0.7 }}>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Tooltip title={t('edit')}>
+                            <IconButton
+                              size="small"
+                              onClick={(e) => { e.stopPropagation(); handleEditUser(user); }}
+                              disabled={currentUser?.role !== 'root' && currentUser?.role !== 'admin' && currentUser?.role !== 'audit'}
+                              sx={{ p: 0.5, color: '#666', '&:hover': { color: '#1976d2', backgroundColor: 'rgba(25, 118, 210, 0.1)' } }}
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title={t('delete')}>
+                            <IconButton
+                              size="small"
+                              onClick={(e) => { e.stopPropagation(); handleDeleteUser(user.id); }}
+                              disabled={currentUser?.role !== 'root' && currentUser?.role !== 'admin' && currentUser?.role !== 'audit'}
+                              sx={{ p: 0.5, color: '#666', '&:hover': { color: '#d32f2f', backgroundColor: 'rgba(211, 47, 47, 0.1)' } }}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
           
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
