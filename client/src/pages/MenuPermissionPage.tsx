@@ -251,7 +251,7 @@ const MenuPermissionPage: React.FC = () => {
     }
   }, []);
 
-  const fetchUsers = useCallback(async () => {
+  const fetchUsers = useCallback(async (userForFiltering = currentUser) => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch('/api/users', {
@@ -265,8 +265,8 @@ const MenuPermissionPage: React.FC = () => {
         setUsers(data);
         
         // 현재 사용자 정보가 있으면 필터링 적용
-        if (currentUser) {
-          const filtered = filterUsersByPermission(data, currentUser);
+        if (userForFiltering) {
+          const filtered = filterUsersByPermission(data, userForFiltering);
           console.log('Filtered users by permission:', filtered);
           setFilteredUsers(filtered);
         } else {
@@ -285,7 +285,7 @@ const MenuPermissionPage: React.FC = () => {
       setUsers([]);
       setFilteredUsers([]);
     }
-  }, [currentUser]);
+  }, []); // 의존성 배열에서 currentUser 제거
 
   const fetchMenus = useCallback(async () => {
     try {
@@ -328,21 +328,22 @@ const MenuPermissionPage: React.FC = () => {
     }
   }, []);
 
-  // 초기 데이터 로드
+  // 초기 데이터 로드 - 컴포넌트 마운트 시 한 번만 실행
   useEffect(() => {
     const initializeData = async () => {
       await fetchCurrentUser();
       fetchMenus();
     };
     initializeData();
-  }, [fetchCurrentUser, fetchMenus]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 의도적으로 빈 의존성 배열로 초기 로딩만 수행
 
   // 현재 사용자 정보가 로드된 후 사용자 목록 가져오기
   useEffect(() => {
     if (currentUser) {
-      fetchUsers();
+      fetchUsers(currentUser);
     }
-  }, [currentUser, fetchUsers]);
+  }, [currentUser, fetchUsers]); // fetchUsers는 이제 안정적이므로 의존성에 포함 가능
 
   const flattenMenuTree = (menuTree: any[]): Menu[] => {
     const result: Menu[] = [];
