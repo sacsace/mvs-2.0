@@ -1,1 +1,1 @@
-web: cd server && node --max-old-space-size=128 --expose-gc --optimize-for-size dist/index.js 
+web: cd server && node --max-old-space-size=512 --expose-gc --no-warnings dist/index.js 

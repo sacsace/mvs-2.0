@@ -192,10 +192,15 @@ const theme = createTheme({
   },
 });
 
-// Axios 기본 설정 - 현재 호스트에 따라 동적으로 설정
-const currentHost = window.location.hostname;
-const serverPort = '3001';
-axios.defaults.baseURL = `http://${currentHost}:${serverPort}`;
+// Axios 기본 설정 - 환경에 따라 동적으로 설정
+if (process.env.NODE_ENV === 'development') {
+  const currentHost = window.location.hostname;
+  const serverPort = '3001';
+  axios.defaults.baseURL = `http://${currentHost}:${serverPort}`;
+} else {
+  // 프로덕션에서는 상대 경로 사용 (HTTPS 호환)
+  axios.defaults.baseURL = '';
+}
 
 // axios 인터셉터는 auth.ts의 setupAxiosInterceptors에서 처리됩니다.
 

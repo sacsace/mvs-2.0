@@ -43,7 +43,7 @@ const MenuMngPage: React.FC = () => {
   const fetchMenus = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('http://localhost:3001/api/menus');
+      const response = await axios.get('/api/menus');
       console.log('Received menu data:', response.data);
       if (response.data && Array.isArray(response.data)) {
         setMenus(response.data);
@@ -90,7 +90,7 @@ const MenuMngPage: React.FC = () => {
 
   const handleDelete = async (menu_id: number) => {
     try {
-      await axios.delete(`http://localhost:3001/api/menus/${menu_id}`);
+      await axios.delete(`/api/menus/${menu_id}`);
       await fetchMenus();
     } catch (error) {
       console.error('메뉴 삭제에 실패했습니다:', error);
@@ -107,9 +107,9 @@ const MenuMngPage: React.FC = () => {
       };
 
       if (editMenu) {
-        await axios.put(`http://localhost:3001/api/menus/${editMenu.menu_id}`, menuData);
+        await axios.put(`/api/menus/${editMenu.menu_id}`, menuData);
       } else {
-        await axios.post('http://localhost:3001/api/menus', menuData);
+        await axios.post('/api/menus', menuData);
       }
       
       // 메뉴 목록 새로고침
