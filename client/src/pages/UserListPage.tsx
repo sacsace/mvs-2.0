@@ -47,7 +47,7 @@ import {
   Update as UpdateIcon
 } from '@mui/icons-material';
 import { useLanguage } from '../contexts/LanguageContext';
-import { filterUsersByPermission } from '../hooks/useMenuPermission';
+import { filterUsersByPermission, useMenuPermission } from '../hooks/useMenuPermission';
 
 interface User {
   id: number;
@@ -70,6 +70,7 @@ interface Company {
 
 const UserListPage: React.FC = () => {
   const { t } = useLanguage();
+  const { permission: userListMenuPermission, currentUser: menuCurrentUser } = useMenuPermission('사용자 목록');
   const [users, setUsers] = useState<User[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
@@ -445,7 +446,7 @@ const UserListPage: React.FC = () => {
             {t('userManagement')}
           </Typography>
         </Box>
-        {(currentUser?.role === 'root' || currentUser?.role === 'admin' || currentUser?.role === 'audit') && (
+        {!!userListMenuPermission.can_create && (
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -638,26 +639,28 @@ const UserListPage: React.FC = () => {
                       </TableCell>
                       <TableCell sx={{ border: 0, py: 0.7 }}>
                         <Box sx={{ display: 'flex', gap: 1 }}>
-                          <Tooltip title={t('edit')}>
-                            <IconButton
-                              size="small"
-                              onClick={(e) => { e.stopPropagation(); handleEditUser(user); }}
-                              disabled={currentUser?.role !== 'root' && currentUser?.role !== 'admin' && currentUser?.role !== 'audit'}
-                              sx={{ p: 0.5, color: '#666', '&:hover': { color: '#1976d2', backgroundColor: 'rgba(25, 118, 210, 0.1)' } }}
-                            >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title={t('delete')}>
-                            <IconButton
-                              size="small"
-                              onClick={(e) => { e.stopPropagation(); handleDeleteUser(user.id); }}
-                              disabled={currentUser?.role !== 'root' && currentUser?.role !== 'admin' && currentUser?.role !== 'audit'}
-                              sx={{ p: 0.5, color: '#666', '&:hover': { color: '#d32f2f', backgroundColor: 'rgba(211, 47, 47, 0.1)' } }}
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
+                          {!!userListMenuPermission.can_update && (
+                            <Tooltip title={t('edit')}>
+                              <IconButton
+                                size="small"
+                                onClick={(e) => { e.stopPropagation(); handleEditUser(user); }}
+                                sx={{ p: 0.5, color: '#666', '&:hover': { color: '#1976d2', backgroundColor: 'rgba(25, 118, 210, 0.1)' } }}
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                          {!!userListMenuPermission.can_delete && (
+                            <Tooltip title={t('delete')}>
+                              <IconButton
+                                size="small"
+                                onClick={(e) => { e.stopPropagation(); handleDeleteUser(user.id); }}
+                                sx={{ p: 0.5, color: '#666', '&:hover': { color: '#d32f2f', backgroundColor: 'rgba(211, 47, 47, 0.1)' } }}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
                         </Box>
                       </TableCell>
                     </TableRow>

@@ -266,7 +266,7 @@ const MenuPermissionPage: React.FC = () => {
         
         // 현재 사용자 정보가 있으면 필터링 적용
         if (currentUser) {
-          const filtered = filterUsersByPermission(data, currentUser.role);
+          const filtered = filterUsersByPermission(data, currentUser);
           console.log('Filtered users by permission:', filtered);
           setFilteredUsers(filtered);
         } else {
@@ -371,7 +371,18 @@ const MenuPermissionPage: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        setPermissions(data);
+        console.log('📊 메뉴 권한 응답:', data);
+        
+        // 새로운 서버 응답 형식 처리
+        if (data.success && Array.isArray(data.data)) {
+          setPermissions(data.data);
+        } else if (Array.isArray(data)) {
+          // 이전 형식 호환성
+          setPermissions(data);
+        } else {
+          console.error('예상하지 못한 응답 형식:', data);
+          setPermissions([]);
+        }
       } else {
         setError('메뉴 권한을 불러오는데 실패했습니다.');
       }
@@ -672,14 +683,56 @@ const MenuPermissionPage: React.FC = () => {
   };
 
   const getPermissionForMenu = (menuId: number) => {
-    return permissions.find(p => p.menu_id === menuId) || {
+    // 디버깅: permissions 타입 확인
+    console.log('🔍 getPermissionForMenu 호출:', { menuId, permissionsType: typeof permissions, isArray: Array.isArray(permissions), permissions });
+    
+    if (!Array.isArray(permissions)) {
+      console.error('❌ permissions가 배열이 아닙니다:', permissions);
+      return {
+        id: 0,
+        user_id: selectedUser as number,
+        menu_id: menuId,
+        can_read: true,
+        can_create: false,
+        can_update: false,
+        can_delete: false,
+        create_date: new Date().toISOString()
+      };
+    }
+    
+    const permission = permissions.find(p => p.menu_id === menuId);
+    
+    if (permission) {
+      return permission;
+    }
+    
+    // 권한이 없는 경우 선택된 사용자 역할에 따른 기본값 반환
+    const selectedUserData = users.find(u => u.id === selectedUser);
+    const selectedUserRole = selectedUserData?.role || 'user';
+    
+    const getDefaultPermissionByRole = (role: string) => {
+      switch (role) {
+        case 'root':
+          return { can_read: true, can_create: true, can_update: true, can_delete: true };
+        case 'audit':
+        case 'admin':
+          return { can_read: true, can_create: true, can_update: true, can_delete: false };
+        case 'user':
+        default:
+          return { can_read: true, can_create: false, can_update: false, can_delete: false };
+      }
+    };
+    
+    const defaultPermission = getDefaultPermissionByRole(selectedUserRole);
+    
+    return {
       id: 0,
       user_id: selectedUser as number,
       menu_id: menuId,
-      can_read: true,
-      can_create: true,
-      can_update: true,
-      can_delete: true,
+      can_read: defaultPermission.can_read,
+      can_create: defaultPermission.can_create,
+      can_update: defaultPermission.can_update,
+      can_delete: defaultPermission.can_delete,
       create_date: new Date().toISOString()
     };
   };
@@ -1038,63 +1091,73 @@ const MenuPermissionPage: React.FC = () => {
                   {/* 메뉴 관리 버튼들 */}
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     {/* 순서 변경 버튼들 */}
-                    <Tooltip title="위로 이동">
-                      <IconButton
-                        size="small"
-                        onClick={() => handleMoveUp(menu)}
-                        sx={{ 
-                          p: 0.25,
-                          color: '#666',
-                          '&:hover': { color: '#1976d2', backgroundColor: 'rgba(25, 118, 210, 0.1)' }
-                        }}
-                      >
-                        <ArrowUpIcon sx={{ fontSize: 14 }} />
-                      </IconButton>
-                    </Tooltip>
-                    
-                    <Tooltip title="아래로 이동">
-                      <IconButton
-                        size="small"
-                        onClick={() => handleMoveDown(menu)}
-                        sx={{ 
-                          p: 0.25,
-                          color: '#666',
-                          '&:hover': { color: '#1976d2', backgroundColor: 'rgba(25, 118, 210, 0.1)' }
-                        }}
-                      >
-                        <ArrowDownIcon sx={{ fontSize: 14 }} />
-                      </IconButton>
-                    </Tooltip>
+                    {/* 메뉴 순서 변경은 root만 가능 */}
+                    {currentUser?.role === 'root' && (
+                      <>
+                        <Tooltip title="위로 이동">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleMoveUp(menu)}
+                            sx={{ 
+                              p: 0.25,
+                              color: '#666',
+                              '&:hover': { color: '#1976d2', backgroundColor: 'rgba(25, 118, 210, 0.1)' }
+                            }}
+                          >
+                            <ArrowUpIcon sx={{ fontSize: 14 }} />
+                          </IconButton>
+                        </Tooltip>
+                        
+                        <Tooltip title="아래로 이동">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleMoveDown(menu)}
+                            sx={{ 
+                              p: 0.25,
+                              color: '#666',
+                              '&:hover': { color: '#1976d2', backgroundColor: 'rgba(25, 118, 210, 0.1)' }
+                            }}
+                          >
+                            <ArrowDownIcon sx={{ fontSize: 14 }} />
+                          </IconButton>
+                        </Tooltip>
+                      </>
+                    )}
 
                     {/* 수정 버튼 */}
-                    <Tooltip title="메뉴 수정">
-                      <IconButton
-                        size="small"
-                        onClick={() => handleEditMenu(menu)}
-                        sx={{ 
-                          p: 0.25,
-                          color: '#666',
-                          '&:hover': { color: '#1976d2', backgroundColor: 'rgba(25, 118, 210, 0.1)' }
-                        }}
-                      >
-                        <EditIcon sx={{ fontSize: 17 }} />
-                      </IconButton>
-                    </Tooltip>
+                    {/* 메뉴 수정, 삭제는 root만 가능 */}
+                    {currentUser?.role === 'root' && (
+                      <>
+                        <Tooltip title="메뉴 수정">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleEditMenu(menu)}
+                            sx={{ 
+                              p: 0.25,
+                              color: '#666',
+                              '&:hover': { color: '#1976d2', backgroundColor: 'rgba(25, 118, 210, 0.1)' }
+                            }}
+                          >
+                            <EditIcon sx={{ fontSize: 17 }} />
+                          </IconButton>
+                        </Tooltip>
 
-                    {/* 삭제 버튼 */}
-                    <Tooltip title="메뉴 삭제">
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDeleteMenu(menu)}
-                        sx={{ 
-                          p: 0.25,
-                          color: '#666',
-                          '&:hover': { color: '#d32f2f', backgroundColor: 'rgba(211, 47, 47, 0.1)' }
-                        }}
-                      >
-                        <DeleteIcon sx={{ fontSize: 17 }} />
-                      </IconButton>
-                    </Tooltip>
+                        {/* 삭제 버튼 */}
+                        <Tooltip title="메뉴 삭제">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDeleteMenu(menu)}
+                            sx={{ 
+                              p: 0.25,
+                              color: '#666',
+                              '&:hover': { color: '#d32f2f', backgroundColor: 'rgba(211, 47, 47, 0.1)' }
+                            }}
+                          >
+                            <DeleteIcon sx={{ fontSize: 17 }} />
+                          </IconButton>
+                        </Tooltip>
+                      </>
+                    )}
                   </Box>
                 </Box>
                 
@@ -1254,21 +1317,23 @@ const MenuPermissionPage: React.FC = () => {
                 메뉴 트리 구조
               </Typography>
               <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button
-                  variant="outlined"
-                  startIcon={<AddIcon />}
-                  onClick={handleAddMenu}
-                  sx={{ 
-                    borderColor: '#1976d2',
-                    color: '#1976d2',
-                    '&:hover': {
-                      borderColor: '#1565c0',
-                      backgroundColor: 'rgba(25, 118, 210, 0.04)'
-                    }
-                  }}
-                >
-                  메뉴 추가
-                </Button>
+                {currentUser?.role === 'root' && (
+                  <Button
+                    variant="outlined"
+                    startIcon={<AddIcon />}
+                    onClick={handleAddMenu}
+                    sx={{ 
+                      borderColor: '#1976d2',
+                      color: '#1976d2',
+                      '&:hover': {
+                        borderColor: '#1565c0',
+                        backgroundColor: 'rgba(25, 118, 210, 0.04)'
+                      }
+                    }}
+                  >
+                    메뉴 추가
+                  </Button>
+                )}
                 <Button
                   variant="outlined"
                   startIcon={<RefreshIcon />}

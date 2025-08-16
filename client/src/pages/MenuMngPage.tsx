@@ -37,6 +37,7 @@ const MenuMngPage: React.FC = () => {
   const [icon, setIcon] = useState('');
   const [orderNum, setOrderNum] = useState(1);
   const [expandedMenus, setExpandedMenus] = useState<number[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   const drawerWidth = 220;
 
@@ -58,7 +59,18 @@ const MenuMngPage: React.FC = () => {
     }
   };
 
+  // 현재 사용자 정보 가져오기
+  const fetchCurrentUser = async () => {
+    try {
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      setCurrentUser(userData);
+    } catch (error) {
+      console.error('사용자 정보 로드 실패:', error);
+    }
+  };
+
   useEffect(() => {
+    fetchCurrentUser();
     fetchMenus();
   }, []);
 
@@ -165,9 +177,15 @@ const MenuMngPage: React.FC = () => {
           <TableCell sx={{ border: 0, fontSize: '0.75rem', py: 0.7, color: '#6b7a90' }}>{menu.order_num}</TableCell>
           <TableCell sx={{ border: 0, fontSize: '0.75rem', py: 0.7, color: '#6b7a90' }}>{menu.parent_id ?? '-'}</TableCell>
           <TableCell sx={{ border: 0, fontSize: '0.75rem', py: 0.7, color: '#6b7a90' }}>
-            <Button size="small" startIcon={<EditIcon />} onClick={() => handleEdit(menu)} sx={{ minWidth: 0, px: 0.7, fontSize: '0.75rem', color: '#1976d2', textTransform: 'none', mr: 0.5, borderRadius: 2, bgcolor: 'rgba(25,118,210,0.04)', '&:hover': { bgcolor: 'rgba(25,118,210,0.10)' } }}>수정</Button>
-            <Button size="small" startIcon={<DeleteIcon />} onClick={() => handleDelete(menu.menu_id)} sx={{ minWidth: 0, px: 0.7, fontSize: '0.75rem', color: '#d32f2f', textTransform: 'none', mr: 0.5, borderRadius: 2, bgcolor: 'rgba(211,47,47,0.04)', '&:hover': { bgcolor: 'rgba(211,47,47,0.10)' } }}>삭제</Button>
-            <Button size="small" startIcon={<AddIcon />} onClick={() => handleAdd(menu.menu_id)} sx={{ minWidth: 0, px: 0.7, fontSize: '0.75rem', color: '#1976d2', textTransform: 'none', borderRadius: 2, bgcolor: 'rgba(25,118,210,0.04)', '&:hover': { bgcolor: 'rgba(25,118,210,0.10)' } }}>하위 메뉴 추가</Button>
+            {currentUser?.role === 'root' ? (
+              <>
+                <Button size="small" startIcon={<EditIcon />} onClick={() => handleEdit(menu)} sx={{ minWidth: 0, px: 0.7, fontSize: '0.75rem', color: '#1976d2', textTransform: 'none', mr: 0.5, borderRadius: 2, bgcolor: 'rgba(25,118,210,0.04)', '&:hover': { bgcolor: 'rgba(25,118,210,0.10)' } }}>수정</Button>
+                <Button size="small" startIcon={<DeleteIcon />} onClick={() => handleDelete(menu.menu_id)} sx={{ minWidth: 0, px: 0.7, fontSize: '0.75rem', color: '#d32f2f', textTransform: 'none', mr: 0.5, borderRadius: 2, bgcolor: 'rgba(211,47,47,0.04)', '&:hover': { bgcolor: 'rgba(211,47,47,0.10)' } }}>삭제</Button>
+                <Button size="small" startIcon={<AddIcon />} onClick={() => handleAdd(menu.menu_id)} sx={{ minWidth: 0, px: 0.7, fontSize: '0.75rem', color: '#1976d2', textTransform: 'none', borderRadius: 2, bgcolor: 'rgba(25,118,210,0.04)', '&:hover': { bgcolor: 'rgba(25,118,210,0.10)' } }}>하위 메뉴 추가</Button>
+              </>
+            ) : (
+              <span style={{ color: '#999', fontSize: '0.75rem' }}>시스템 관리자만 수정 가능</span>
+            )}
           </TableCell>
         </TableRow>
         {hasChildren && (
@@ -247,7 +265,9 @@ const MenuMngPage: React.FC = () => {
           <Box p={2}>
             <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
               <Typography variant="h6" fontWeight={700} fontSize="0.85rem" sx={{ letterSpacing: 0.5 }}>메뉴 관리</Typography>
-              <Button variant="contained" size="medium" startIcon={<AddIcon />} onClick={() => handleAdd(null)} sx={{ fontSize: '0.8rem', textTransform: 'none', boxShadow: 'none', borderRadius: 2, py: 0.8, px: 2, bgcolor: '#1976d2', '&:hover': { bgcolor: '#145ea8' } }}>상위 메뉴 추가</Button>
+              {currentUser?.role === 'root' && (
+                <Button variant="contained" size="medium" startIcon={<AddIcon />} onClick={() => handleAdd(null)} sx={{ fontSize: '0.8rem', textTransform: 'none', boxShadow: 'none', borderRadius: 2, py: 0.8, px: 2, bgcolor: '#1976d2', '&:hover': { bgcolor: '#145ea8' } }}>상위 메뉴 추가</Button>
+              )}
             </Box>
             {loading ? (
               <Box display="flex" justifyContent="center" alignItems="center" minHeight={120}>

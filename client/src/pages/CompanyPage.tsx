@@ -142,6 +142,12 @@ const CompanyPage: React.FC = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // 새 회사 생성 모드에서는 이미지 업로드 불가
+    if (!isEditing || !selectedCompany?.company_id) {
+      setError('회사를 먼저 생성한 후 이미지를 업로드해주세요.');
+      return;
+    }
+
     // 파일 타입 검증
     if (!file.type.startsWith('image/')) {
       setError('이미지 파일만 업로드 가능합니다.');
@@ -160,7 +166,7 @@ const CompanyPage: React.FC = () => {
 
       const formData = new FormData();
       formData.append('signature', file);
-      formData.append('company_id', selectedCompany?.company_id.toString() || '');
+      formData.append('company_id', selectedCompany.company_id.toString());
 
       const token = localStorage.getItem('token');
       const response = await fetch('/api/companies/upload-signature', {
@@ -240,6 +246,12 @@ const CompanyPage: React.FC = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // 새 회사 생성 모드에서는 이미지 업로드 불가
+    if (!isEditing || !selectedCompany?.company_id) {
+      setError('회사를 먼저 생성한 후 이미지를 업로드해주세요.');
+      return;
+    }
+
     // 파일 타입 검증
     if (!file.type.startsWith('image/')) {
       setError('이미지 파일만 업로드 가능합니다.');
@@ -258,7 +270,7 @@ const CompanyPage: React.FC = () => {
 
       const formData = new FormData();
       formData.append('stamp', file);
-      formData.append('company_id', selectedCompany?.company_id.toString() || '');
+      formData.append('company_id', selectedCompany.company_id.toString());
 
       const token = localStorage.getItem('token');
       const response = await fetch('/api/companies/upload-stamp', {
@@ -619,7 +631,7 @@ const CompanyPage: React.FC = () => {
           </Typography>
         </Box>
         {/* 회사 추가 권한 확인 */}
-        {companyMenuPermission.can_create && (
+        {!!companyMenuPermission.can_create && (
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -788,7 +800,7 @@ const CompanyPage: React.FC = () => {
                             </IconButton>
                           </Tooltip>
                           {/* 삭제 권한 확인 */}
-                          {companyMenuPermission.can_delete && (
+                          {!!companyMenuPermission.can_delete && (
                             <Tooltip title={t('delete')}>
                               <IconButton
                                 size="small"
@@ -820,7 +832,7 @@ const CompanyPage: React.FC = () => {
                 {currentCompany.name}
               </Typography>
               {/* 수정 권한 확인 */}
-              {companyMenuPermission.can_update && (
+              {!!companyMenuPermission.can_update && (
                 <Button
                   variant="outlined"
                   startIcon={<EditIcon />}
@@ -1276,7 +1288,7 @@ const CompanyPage: React.FC = () => {
                 component="label"
                 variant="outlined"
                 startIcon={<UploadIcon />}
-                disabled={uploadingSignature}
+                disabled={uploadingSignature || !isEditing || !selectedCompany?.company_id}
                 sx={{ 
                   fontSize: '0.75rem',
                   '& .MuiButton-startIcon': { mr: 0.5 }
@@ -1292,7 +1304,10 @@ const CompanyPage: React.FC = () => {
               </Button>
               
               <Typography variant="caption" sx={{ display: 'block', mt: 0.5, fontSize: '0.65rem', color: '#666' }}>
-                이미지 파일만 가능 (최대 5MB)
+                {!isEditing || !selectedCompany?.company_id 
+                  ? '회사 생성 후 이미지 업로드가 가능합니다' 
+                  : '이미지 파일만 가능 (최대 5MB)'
+                }
               </Typography>
             </Box>
 
@@ -1331,7 +1346,7 @@ const CompanyPage: React.FC = () => {
                 component="label"
                 variant="outlined"
                 startIcon={<UploadIcon />}
-                disabled={uploadingStamp}
+                disabled={uploadingStamp || !isEditing || !selectedCompany?.company_id}
                 sx={{ 
                   fontSize: '0.75rem',
                   '& .MuiButton-startIcon': { mr: 0.5 }
@@ -1347,7 +1362,10 @@ const CompanyPage: React.FC = () => {
               </Button>
               
               <Typography variant="caption" sx={{ display: 'block', mt: 0.5, fontSize: '0.65rem', color: '#666' }}>
-                이미지 파일만 가능 (최대 5MB)
+                {!isEditing || !selectedCompany?.company_id 
+                  ? '회사 생성 후 이미지 업로드가 가능합니다' 
+                  : '이미지 파일만 가능 (최대 5MB)'
+                }
               </Typography>
             </Box>
           </Box>

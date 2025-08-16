@@ -39,6 +39,7 @@ import {
   Clear
 } from '@mui/icons-material';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useMenuPermission } from '../hooks/useMenuPermission';
 
 
 // 공백 제거 유틸리티 함수
@@ -76,6 +77,7 @@ interface Partner {
 
 const PartnerPage: React.FC = () => {
   const { t } = useLanguage();
+  const { permission: partnerMenuPermission, loading: permissionLoading } = useMenuPermission('파트너 업체 관리');
   const [partners, setPartners] = useState<Partner[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
@@ -469,14 +471,16 @@ const PartnerPage: React.FC = () => {
 
       {/* 액션 버튼 */}
       <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={handleAddPartner}
-          sx={{ fontSize: '0.75rem' }}
-        >
-          파트너사 추가
-        </Button>
+        {!!partnerMenuPermission.can_create && (
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={handleAddPartner}
+            sx={{ fontSize: '0.75rem' }}
+          >
+            파트너사 추가
+          </Button>
+        )}
       </Box>
 
       {/* 파트너사 목록 테이블 */}
@@ -534,28 +538,32 @@ const PartnerPage: React.FC = () => {
                   </TableCell>
                   <TableCell sx={{ fontSize: '0.75rem' }}>
                     <Box sx={{ display: 'flex', gap: 0.5 }}>
-                      <Tooltip title="수정">
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditPartner(partner);
-                          }}
-                        >
-                          <Edit fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="삭제">
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeletePartner(partner);
-                          }}
-                        >
-                          <Delete fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                      {!!partnerMenuPermission.can_update && (
+                        <Tooltip title="수정">
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditPartner(partner);
+                            }}
+                          >
+                            <Edit fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {!!partnerMenuPermission.can_delete && (
+                        <Tooltip title="삭제">
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeletePartner(partner);
+                            }}
+                          >
+                            <Delete fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
                     </Box>
                   </TableCell>
                 </TableRow>

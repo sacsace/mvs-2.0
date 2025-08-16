@@ -68,7 +68,7 @@ const UserPage: React.FC = () => {
       }
 
       // 권한 기반 사용자 필터링 적용
-      const filteredUsers = currentUser ? filterUsersByPermission(usersRes.data, currentUser.role) : usersRes.data;
+      const filteredUsers = currentUser ? filterUsersByPermission(usersRes.data, currentUser) : usersRes.data;
       console.log('권한 필터링 적용:', {
         전체사용자수: usersRes.data.length,
         필터링후사용자수: filteredUsers.length,
@@ -309,7 +309,7 @@ const UserPage: React.FC = () => {
     <Box p={3}>
       <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
         <Typography variant="h6" fontWeight={700} fontSize="0.85rem">사용자 관리</Typography>
-        {currentUser && userMenuPermission.can_create && getAvailableRoles(currentUser.role).length > 0 && (
+        {currentUser && !!userMenuPermission.can_create && getAvailableRoles(currentUser.role).length > 0 && (
           <Button variant="contained" startIcon={<AddIcon />} onClick={handleDialogOpen} sx={{ fontSize: '0.8rem', textTransform: 'none' }}>사용자 추가</Button>
         )}
       </Box>

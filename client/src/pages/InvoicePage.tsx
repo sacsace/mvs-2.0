@@ -47,6 +47,7 @@ import {
   Print as PrintIcon
 } from '@mui/icons-material';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useMenuPermission } from '../hooks/useMenuPermission';
 import html2pdf from 'html2pdf.js';
 import EInvoicePage from './EInvoicePage';
 
@@ -108,6 +109,7 @@ interface Company {
 
 const InvoicePage: React.FC = () => {
   const { t } = useLanguage();
+  const { permission: invoiceMenuPermission, loading: permissionLoading } = useMenuPermission('매출 관리');
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1950,24 +1952,28 @@ const InvoicePage: React.FC = () => {
                              <ViewIcon fontSize="small" />
                            </IconButton>
                          </Tooltip>
-                         <Tooltip title="Edit">
-                           <IconButton
-                             size="small"
-                             onClick={(e) => { e.stopPropagation(); handleEditInvoice(invoice); }}
-                             sx={{ p: 0.5, color: '#666', '&:hover': { color: '#1976d2', backgroundColor: 'rgba(25, 118, 210, 0.1)' } }}
-                           >
-                             <EditIcon fontSize="small" />
-                           </IconButton>
-                         </Tooltip>
-                         <Tooltip title="Delete">
-                           <IconButton
-                             size="small"
-                             onClick={(e) => { e.stopPropagation(); handleDeleteInvoice(invoice.id); }}
-                             sx={{ p: 0.5, color: '#666', '&:hover': { color: '#d32f2f', backgroundColor: 'rgba(211, 47, 47, 0.1)' } }}
-                           >
-                             <DeleteIcon fontSize="small" />
-                           </IconButton>
-                         </Tooltip>
+                         {!!invoiceMenuPermission.can_update && (
+                           <Tooltip title="Edit">
+                             <IconButton
+                               size="small"
+                               onClick={(e) => { e.stopPropagation(); handleEditInvoice(invoice); }}
+                               sx={{ p: 0.5, color: '#666', '&:hover': { color: '#1976d2', backgroundColor: 'rgba(25, 118, 210, 0.1)' } }}
+                             >
+                               <EditIcon fontSize="small" />
+                             </IconButton>
+                           </Tooltip>
+                         )}
+                         {!!invoiceMenuPermission.can_delete && (
+                           <Tooltip title="Delete">
+                             <IconButton
+                               size="small"
+                               onClick={(e) => { e.stopPropagation(); handleDeleteInvoice(invoice.id); }}
+                               sx={{ p: 0.5, color: '#666', '&:hover': { color: '#d32f2f', backgroundColor: 'rgba(211, 47, 47, 0.1)' } }}
+                             >
+                               <DeleteIcon fontSize="small" />
+                             </IconButton>
+                           </Tooltip>
+                         )}
                        </Box>
                      </TableCell>
                   </TableRow>
@@ -2322,22 +2328,24 @@ const InvoicePage: React.FC = () => {
           >
             Cancel
           </Button>
-          <Button 
-            onClick={handleSaveInvoice} 
-            variant="contained" 
-            sx={{ 
-              fontSize: '0.75rem',
-              textTransform: 'none',
-              boxShadow: 'none',
-              borderRadius: 2,
-              py: 0.8,
-              px: 2,
-              bgcolor: '#1976d2',
-              '&:hover': { bgcolor: '#145ea8' }
-            }}
-          >
-            Save
-          </Button>
+          {!!(invoiceMenuPermission.can_create || invoiceMenuPermission.can_update) && (
+            <Button 
+              onClick={handleSaveInvoice} 
+              variant="contained" 
+              sx={{ 
+                fontSize: '0.75rem',
+                textTransform: 'none',
+                boxShadow: 'none',
+                borderRadius: 2,
+                py: 0.8,
+                px: 2,
+                bgcolor: '#1976d2',
+                '&:hover': { bgcolor: '#145ea8' }
+              }}
+            >
+              Save
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 
@@ -3005,22 +3013,24 @@ const InvoicePage: React.FC = () => {
             >
               Cancel
             </Button>
-            <Button 
-              onClick={handleSaveInvoiceForm} 
-              variant="contained" 
-              sx={{ 
-                fontSize: '0.75rem',
-                textTransform: 'none',
-                boxShadow: 'none',
-                borderRadius: 2,
-                py: 0.8,
-                px: 2,
-                bgcolor: '#1976d2',
-                '&:hover': { bgcolor: '#145ea8' }
-              }}
-            >
-              Save Invoice
-            </Button>
+            {!!(invoiceMenuPermission.can_create || invoiceMenuPermission.can_update) && (
+              <Button 
+                onClick={handleSaveInvoiceForm} 
+                variant="contained" 
+                sx={{ 
+                  fontSize: '0.75rem',
+                  textTransform: 'none',
+                  boxShadow: 'none',
+                  borderRadius: 2,
+                  py: 0.8,
+                  px: 2,
+                  bgcolor: '#1976d2',
+                  '&:hover': { bgcolor: '#145ea8' }
+                }}
+              >
+                Save Invoice
+              </Button>
+            )}
           </Box>
         </DialogActions>
       </Dialog>
@@ -3369,22 +3379,24 @@ const InvoicePage: React.FC = () => {
               >
                 Reset
               </Button>
-              <Button 
-                onClick={handleSaveInvoice} 
-                variant="contained" 
-                sx={{ 
-                  fontSize: '0.75rem',
-                  textTransform: 'none',
-                  boxShadow: 'none',
-                  borderRadius: 2,
-                  py: 0.8,
-                  px: 2,
-                  bgcolor: '#1976d2',
-                  '&:hover': { bgcolor: '#145ea8' }
-                }}
-              >
-                Save Invoice
-              </Button>
+              {!!(invoiceMenuPermission.can_create || invoiceMenuPermission.can_update) && (
+                <Button 
+                  onClick={handleSaveInvoice} 
+                  variant="contained" 
+                  sx={{ 
+                    fontSize: '0.75rem',
+                    textTransform: 'none',
+                    boxShadow: 'none',
+                    borderRadius: 2,
+                    py: 0.8,
+                    px: 2,
+                    bgcolor: '#1976d2',
+                    '&:hover': { bgcolor: '#145ea8' }
+                  }}
+                >
+                  Save Invoice
+                </Button>
+              )}
             </Box>
           </CardContent>
         </Card>
@@ -3404,23 +3416,25 @@ const InvoicePage: React.FC = () => {
           <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
             Proforma 인보이스 생성 기능을 여기에 구현할 예정입니다.
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<ReceiptIcon />}
-            onClick={handleCreateProformaInvoice}
-            sx={{ 
-              fontSize: '0.75rem', 
-              textTransform: 'none', 
-              boxShadow: 'none', 
-              borderRadius: 2, 
-              py: 0.8, 
-              px: 2, 
-              bgcolor: '#9c27b0', 
-              '&:hover': { bgcolor: '#7b1fa2' } 
-            }}
-          >
-            Create Proforma Invoice
-          </Button>
+          {!!invoiceMenuPermission.can_create && (
+            <Button
+              variant="contained"
+              startIcon={<ReceiptIcon />}
+              onClick={handleCreateProformaInvoice}
+              sx={{ 
+                fontSize: '0.75rem', 
+                textTransform: 'none', 
+                boxShadow: 'none', 
+                borderRadius: 2, 
+                py: 0.8, 
+                px: 2, 
+                bgcolor: '#9c27b0', 
+                '&:hover': { bgcolor: '#7b1fa2' } 
+              }}
+            >
+              Create Proforma Invoice
+            </Button>
+          )}
         </Box>
       )}
     </Box>

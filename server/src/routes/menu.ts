@@ -5,6 +5,7 @@ import User from '../models/User';
 import { Op } from 'sequelize';
 import type { Request } from 'express';
 import { authenticateJWT } from '../utils/jwtMiddleware';
+import { getUserPermissions } from '../utils/permissionChecker';
 
 declare module 'express-serve-static-core' {
   interface Request {
@@ -35,6 +36,7 @@ router.get('/tree', authenticateJWT, async (req, res) => {
     console.log('메뉴 트리 API 호출됨');
     console.log('사용자 정보:', req.user);
     
+    const userId = req.user?.id;
     const userRole = req.user?.role;
     console.log('사용자 역할:', userRole);
     
@@ -45,10 +47,51 @@ router.get('/tree', authenticateJWT, async (req, res) => {
     }
 
     console.log('메뉴 데이터 조회 시작');
-    const menus = await Menu.findAll({
-      order: [['order_num', 'ASC']],
-      raw: true
-    });
+    
+    let menus;
+    
+    if (userRole === 'root') {
+      // Root는 모든 메뉴 접근 가능
+      console.log('Root 사용자: 모든 메뉴 조회');
+      menus = await Menu.findAll({
+        order: [['order_num', 'ASC']],
+        raw: true
+      });
+    } else {
+      // Admin은 자신이 접근 가능한 메뉴만 조회
+      console.log(`Admin 사용자(${userId}): 권한이 있는 메뉴만 조회`);
+      
+      // 사용자의 메뉴 권한 조회
+      const menuPermissions = await MenuPermission.findAll({
+        where: { user_id: userId },
+        attributes: ['menu_id', 'can_read', 'can_create', 'can_update', 'can_delete']
+      });
+
+      // 읽기 권한이 있는 메뉴만 필터링
+      const readableMenuPermissions = menuPermissions.filter(mp => Boolean(mp.can_read));
+      const menuIds = readableMenuPermissions.map(mp => mp.menu_id);
+      console.log(`읽기 권한이 있는 메뉴 ID:`, menuIds);
+
+      if (menuIds.length === 0) {
+        console.log('읽기 권한이 있는 메뉴가 없음');
+        return res.json({
+          success: true,
+          data: []
+        });
+      }
+
+      // 권한이 있는 메뉴만 조회
+      menus = await Menu.findAll({
+        where: {
+          menu_id: {
+            [Op.in]: menuIds
+          }
+        },
+        order: [['order_num', 'ASC']],
+        raw: true
+      });
+    }
+    
     console.log('조회된 메뉴 개수:', menus.length);
 
     const menuTree = buildMenuTree(menus);
@@ -71,9 +114,9 @@ router.post('/', authenticateJWT, async (req, res) => {
   try {
     const userRole = req.user?.role;
     
-    // admin 또는 root만 접근 가능
-    if (userRole !== 'admin' && userRole !== 'root') {
-      return res.status(403).json({ error: '접근 권한이 없습니다.' });
+    // root만 메뉴 생성 가능
+    if (userRole !== 'root') {
+      return res.status(403).json({ error: '메뉴 생성은 시스템 관리자(root)만 가능합니다.' });
     }
 
     const { name, name_en, icon, order_num, parent_id, url } = req.body;
@@ -103,9 +146,9 @@ router.put('/:id', authenticateJWT, async (req, res) => {
   try {
     const userRole = req.user?.role;
     
-    // admin 또는 root만 접근 가능
-    if (userRole !== 'admin' && userRole !== 'root') {
-      return res.status(403).json({ error: '접근 권한이 없습니다.' });
+    // root만 메뉴 수정 가능
+    if (userRole !== 'root') {
+      return res.status(403).json({ error: '메뉴 수정은 시스템 관리자(root)만 가능합니다.' });
     }
 
     const { id } = req.params;
@@ -139,9 +182,9 @@ router.delete('/:id', authenticateJWT, async (req, res) => {
   try {
     const userRole = req.user?.role;
     
-    // admin 또는 root만 접근 가능
-    if (userRole !== 'admin' && userRole !== 'root') {
-      return res.status(403).json({ error: '접근 권한이 없습니다.' });
+    // root만 메뉴 삭제 가능
+    if (userRole !== 'root') {
+      return res.status(403).json({ error: '메뉴 삭제는 시스템 관리자(root)만 가능합니다.' });
     }
 
     const { id } = req.params;
@@ -188,10 +231,10 @@ router.put('/:id/move-up', authenticateJWT, async (req, res) => {
     
     const userRole = req.user?.role;
     
-    // admin 또는 root만 접근 가능
-    if (userRole !== 'admin' && userRole !== 'root') {
+    // root만 메뉴 순서 변경 가능
+    if (userRole !== 'root') {
       console.log('권한 없음:', userRole);
-      return res.status(403).json({ error: '접근 권한이 없습니다.' });
+      return res.status(403).json({ error: '메뉴 순서 변경은 시스템 관리자(root)만 가능합니다.' });
     }
 
     const { id } = req.params;
@@ -259,10 +302,10 @@ router.put('/:id/move-down', authenticateJWT, async (req, res) => {
     
     const userRole = req.user?.role;
     
-    // admin 또는 root만 접근 가능
-    if (userRole !== 'admin' && userRole !== 'root') {
+    // root만 메뉴 순서 변경 가능
+    if (userRole !== 'root') {
       console.log('권한 없음:', userRole);
-      return res.status(403).json({ error: '접근 권한이 없습니다.' });
+      return res.status(403).json({ error: '메뉴 순서 변경은 시스템 관리자(root)만 가능합니다.' });
     }
 
     const { id } = req.params;
@@ -425,7 +468,7 @@ router.get('/users', authenticateJWT, async (req, res) => {
   }
 });
 
-// 사용자의 권한에 따른 메뉴 목록 조회 (엄격한 권한 체크)
+// 사용자의 권한에 따른 메뉴 목록 조회 (새로운 권한 시스템 사용)
 router.get('/', authenticateJWT, async (req, res) => {
   try {
     const userId = req.user?.id;
@@ -436,49 +479,47 @@ router.get('/', authenticateJWT, async (req, res) => {
 
     console.log(`사용자 ${userId}의 메뉴 조회 시작`);
 
-    // 사용자의 메뉴 권한 조회
-    const menuPermissions = await MenuPermission.findAll({
-      where: { user_id: userId },
-      attributes: ['menu_id', 'can_read', 'can_create', 'can_update', 'can_delete']
-    });
-
-    console.log(`사용자 ${userId}의 메뉴 권한:`, menuPermissions.length, '개');
-
-    // 권한이 없는 경우 빈 메뉴 목록 반환
-    if (menuPermissions.length === 0) {
-      console.log(`사용자 ${userId}에게 메뉴 권한이 없음. 빈 메뉴 목록 반환`);
+    // 새로운 권한 시스템을 사용하여 사용자의 전체 권한 조회
+    const userPermissions = await getUserPermissions(userId);
+    
+    if (!userPermissions) {
+      console.log(`사용자 ${userId}의 권한 정보를 찾을 수 없음`);
       return res.json({
         success: true,
         data: []
       });
     }
 
-    // 읽기 권한이 있는 메뉴만 조회
-    const readableMenuPermissions = menuPermissions.filter(mp => Boolean(mp.can_read));
-    const menuIds = readableMenuPermissions.map(mp => mp.menu_id);
-    console.log(`읽기 권한이 있는 메뉴 ID:`, menuIds);
+    console.log(`사용자 ${userPermissions.username} (${userPermissions.role})의 권한 조회 완료`);
 
-    // 읽기 권한이 있는 메뉴가 없는 경우 빈 메뉴 목록 반환
-    if (menuIds.length === 0) {
-      console.log(`사용자 ${userId}에게 읽기 권한이 있는 메뉴가 없음. 빈 메뉴 목록 반환`);
+    // 읽기 권한이 있는 메뉴 필터링
+    const readableMenus = Object.entries(userPermissions.menuPermissions)
+      .filter(([menuName, permission]) => permission.can_read)
+      .map(([menuName]) => menuName);
+
+    console.log(`읽기 권한이 있는 메뉴: [${readableMenus.join(', ')}]`);
+
+    // 읽기 권한이 있는 메뉴가 없는 경우
+    if (readableMenus.length === 0) {
+      console.log(`사용자 ${userId}에게 읽기 권한이 있는 메뉴가 없음`);
       return res.json({
         success: true,
         data: []
       });
     }
 
-    // 메뉴 정보 조회
+    // 실제 메뉴 데이터 조회
     const menus = await Menu.findAll({
       where: {
-        menu_id: {
-          [Op.in]: menuIds
+        name: {
+          [Op.in]: readableMenus
         }
       },
       order: [['order_num', 'ASC']],
       raw: true
     });
 
-    console.log(`조회된 메뉴 수:`, menus.length);
+    console.log(`조회된 메뉴 수: ${menus.length}`);
 
     const menuTree = buildMenuTree(menus);
     res.json({

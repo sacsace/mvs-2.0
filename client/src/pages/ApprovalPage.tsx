@@ -46,7 +46,7 @@ import {
   Schedule as ScheduleIcon,
 } from '@mui/icons-material';
 import axios from 'axios';
-import { filterUsersByPermission } from '../hooks/useMenuPermission';
+import { filterUsersByPermission, useMenuPermission } from '../hooks/useMenuPermission';
 
 interface Approval {
   id: number;
@@ -89,6 +89,7 @@ interface User {
 
 const ApprovalPage: React.FC = () => {
   const location = useLocation();
+  const { permission: approvalMenuPermission } = useMenuPermission('전자결재');
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
@@ -495,14 +496,16 @@ const ApprovalPage: React.FC = () => {
             전자 결제
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => { fetchUsers(); setDialogOpen(true); }}
-          sx={{ fontSize: '0.8rem', textTransform: 'none', boxShadow: 'none', borderRadius: 2, py: 0.8, px: 2, bgcolor: '#1976d2', '&:hover': { bgcolor: '#145ea8' } }}
-        >
-          결제요청
-        </Button>
+        {!!approvalMenuPermission.can_create && (
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => { fetchUsers(); setDialogOpen(true); }}
+            sx={{ fontSize: '0.8rem', textTransform: 'none', boxShadow: 'none', borderRadius: 2, py: 0.8, px: 2, bgcolor: '#1976d2', '&:hover': { bgcolor: '#145ea8' } }}
+          >
+            결제요청
+          </Button>
+        )}
       </Box>
 
       {/* 필터 */}
