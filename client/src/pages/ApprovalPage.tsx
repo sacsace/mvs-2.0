@@ -33,6 +33,7 @@ import {
   ListItemText,
   ListItemIcon,
   SelectChangeEvent,
+  Autocomplete,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -44,6 +45,7 @@ import {
   Schedule as ScheduleIcon,
 } from '@mui/icons-material';
 import axios from 'axios';
+import { filterUsersByPermission } from '../hooks/useMenuPermission';
 
 interface Approval {
   id: number;
@@ -87,11 +89,17 @@ interface User {
 const ApprovalPage: React.FC = () => {
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedApproval, setSelectedApproval] = useState<Approval | null>(null);
-  const [filterType, setFilterType] = useState<'all' | 'requested' | 'received'>('all');
+  const [comments, setComments] = useState<any[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [reassignUserId, setReassignUserId] = useState<string>('');
+  const [reassignNote, setReassignNote] = useState('');
+  const [filterType, setFilterType] = useState<'all' | 'requested' | 'received'>('requested');
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false,
@@ -111,9 +119,39 @@ const ApprovalPage: React.FC = () => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   useEffect(() => {
-    fetchApprovals();
-    fetchUsers();
+    const initializeData = async () => {
+      await fetchCurrentUser();
+      fetchApprovals();
+    };
+    initializeData();
   }, [filterType, filterStatus]);
+
+  useEffect(() => {
+    if (currentUser) {
+      fetchUsers();
+    }
+  }, [currentUser]);
+
+  // 알림 읽음 처리
+  useEffect(() => {
+    const markNotificationsAsRead = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        await axios.post('/api/approval/notifications/mark-read', {}, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        
+        // 대시보드 알림 새로고침을 위한 플래그 설정
+        localStorage.setItem('notificationUpdated', Date.now().toString());
+        
+        console.log('✅ 알림 읽음 처리 완료');
+      } catch (error) {
+        console.error('알림 읽음 처리 오류:', error);
+      }
+    };
+
+    markNotificationsAsRead();
+  }, []); // 컴포넌트 마운트시 한 번만 실행
 
   const fetchApprovals = async () => {
     try {
@@ -123,11 +161,20 @@ const ApprovalPage: React.FC = () => {
       if (filterType !== 'all') params.append('type', filterType);
       if (filterStatus !== 'all') params.append('status', filterStatus);
 
+      console.log('🔍 결재 요청 파라미터:', {
+        filterType,
+        filterStatus,
+        url: `/api/approval?${params.toString()}`
+      });
+
       const response = await axios.get(`/api/approval?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
+      console.log('📋 결재 응답 데이터:', response.data);
+
       if (response.data.success) {
+        console.log(`✅ ${response.data.data.length}개의 결재 데이터 로드됨`);
         setApprovals(response.data.data);
       }
     } catch (error) {
@@ -142,6 +189,23 @@ const ApprovalPage: React.FC = () => {
     }
   };
 
+  const fetchCurrentUser = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/api/users/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.data.success) {
+        setCurrentUser(response.data.user);
+        return response.data.user;
+      }
+    } catch (error) {
+      console.error('현재 사용자 조회 오류:', error);
+    }
+    return null;
+  };
+
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -150,7 +214,34 @@ const ApprovalPage: React.FC = () => {
       });
 
       if (response.data.success) {
-        setUsers(response.data.data);
+        const allUsers = response.data.data;
+        setUsers(allUsers);
+        
+        // 결제 승인자는 현재 사용자와 같거나 상위 권한자여야 함
+        if (currentUser) {
+          const approverCandidates = allUsers.filter((user: any) => {
+            // 자신 제외
+            if (user.id === currentUser.id) return false;
+            
+            // 역할 기반 필터링 (승인자는 같거나 상위 권한자)
+            const roleHierarchy: { [key: string]: number } = {
+              'root': 4,
+              'admin': 3,
+              'audit': 3,
+              'user': 1
+            };
+            
+            const currentUserLevel = roleHierarchy[currentUser.role] || 0;
+            const userLevel = roleHierarchy[user.role] || 0;
+            
+            return userLevel >= currentUserLevel;
+          });
+          
+          console.log('승인자 후보:', approverCandidates);
+          setFilteredUsers(approverCandidates);
+        } else {
+          setFilteredUsers(allUsers);
+        }
       }
     } catch (error) {
       console.error('사용자 목록 조회 오류:', error);
@@ -209,6 +300,8 @@ const ApprovalPage: React.FC = () => {
       if (response.data.success) {
         setSelectedApproval(response.data.data);
         setViewDialogOpen(true);
+        // 코멘트 로드
+        fetchComments(approval.id);
       }
     } catch (error) {
       console.error('결제 요청 상세 조회 오류:', error);
@@ -217,6 +310,48 @@ const ApprovalPage: React.FC = () => {
         message: '결제 요청 상세 정보를 불러오는데 실패했습니다.',
         severity: 'error',
       });
+    }
+  };
+
+  const fetchComments = async (approvalId: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`/api/approval/${approvalId}/comments`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.data.success) setComments(res.data.data);
+    } catch (e) {
+      console.error('코멘트 목록 조회 오류:', e);
+    }
+  };
+
+  const handleAddComment = async () => {
+    if (!selectedApproval || !newComment.trim()) return;
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.post(`/api/approval/${selectedApproval.id}/comments`, { comment: newComment }, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.data.success) {
+        setNewComment('');
+        fetchComments(selectedApproval.id);
+      }
+    } catch (e) {
+      console.error('코멘트 작성 오류:', e);
+    }
+  };
+
+  const handleReassign = async () => {
+    if (!selectedApproval || !reassignUserId) return;
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.put(`/api/approval/${selectedApproval.id}/reassign`, { new_approver_id: Number(reassignUserId), note: reassignNote }, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.data.success) {
+        setSnackbar({ open: true, message: '승인자를 재지정했습니다.', severity: 'success' });
+        setReassignUserId('');
+        setReassignNote('');
+        setViewDialogOpen(false);
+        fetchApprovals();
+      }
+    } catch (e) {
+      console.error('재지정 오류:', e);
+      setSnackbar({ open: true, message: '재지정에 실패했습니다.', severity: 'error' });
     }
   };
 
@@ -340,7 +475,7 @@ const ApprovalPage: React.FC = () => {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => setDialogOpen(true)}
+          onClick={() => { fetchUsers(); setDialogOpen(true); }}
           sx={{ fontSize: '0.8rem', textTransform: 'none', boxShadow: 'none', borderRadius: 2, py: 0.8, px: 2, bgcolor: '#1976d2', '&:hover': { bgcolor: '#145ea8' } }}
         >
           결제요청
@@ -421,7 +556,14 @@ const ApprovalPage: React.FC = () => {
             </TableHead>
             <TableBody>
               {approvals.map((approval) => (
-                <TableRow key={approval.id} sx={{ '&:hover': { backgroundColor: '#f8fafc' } }}>
+                <TableRow 
+                  key={approval.id} 
+                  onClick={() => handleViewApproval(approval)}
+                  sx={{ 
+                    '&:hover': { backgroundColor: '#f8fafc' }, 
+                    cursor: 'pointer' 
+                  }}
+                >
                   <TableCell sx={{ pl: 1.2, py: 0.5, fontSize: '0.8rem', border: 0 }}>
                     {approval.title}
                   </TableCell>
@@ -463,7 +605,10 @@ const ApprovalPage: React.FC = () => {
                   <TableCell sx={{ py: 0.5, border: 0 }}>
                     <IconButton
                       size="small"
-                      onClick={() => handleViewApproval(approval)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleViewApproval(approval);
+                      }}
                       sx={{ p: 0.5 }}
                     >
                       <VisibilityIcon sx={{ fontSize: '1rem', color: '#1976d2' }} />
@@ -494,21 +639,34 @@ const ApprovalPage: React.FC = () => {
               />
             </Grid>
             <Grid item xs={12} md={6}>
-              <FormControl fullWidth size="small">
-                <InputLabel sx={{ fontSize: '0.75rem' }}>승인자</InputLabel>
-                <Select
-                  value={formData.approver_id}
-                  label="승인자"
-                  onChange={(e) => setFormData({ ...formData, approver_id: e.target.value })}
-                  sx={{ fontSize: '0.8rem' }}
-                >
-                  {users.map((user) => (
-                    <MenuItem key={user.id} value={user.id} sx={{ fontSize: '0.8rem' }}>
-                      {user.username} ({user.userid})
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <Autocomplete
+                options={filteredUsers}
+                getOptionLabel={(option) => `${option.username} (${option.userid})`}
+                value={filteredUsers.find(user => user.id.toString() === formData.approver_id) || null}
+                onChange={(event, newValue) => {
+                  setFormData({ ...formData, approver_id: newValue ? newValue.id.toString() : '' });
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="승인자"
+                    size="small"
+                    placeholder="승인자를 검색하세요..."
+                    sx={{ 
+                      '& .MuiOutlinedInput-root': { fontSize: '0.8rem' },
+                      '& .MuiInputLabel-root': { fontSize: '0.75rem' }
+                    }}
+                  />
+                )}
+                noOptionsText="승인 가능한 사용자가 없습니다"
+                size="small"
+                fullWidth
+                sx={{
+                  '& .MuiAutocomplete-option': {
+                    fontSize: '0.8rem',
+                  }
+                }}
+              />
             </Grid>
             <Grid item xs={12} md={6}>
               <FormControl fullWidth size="small">
@@ -669,6 +827,91 @@ const ApprovalPage: React.FC = () => {
                     </List>
                   </Grid>
                 )}
+
+                {/* 코멘트 */}
+                <Grid item xs={12}>
+                  <Divider sx={{ my: 2 }} />
+                  <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 600, mb: 1 }}>
+                    코멘트
+                  </Typography>
+                  <List dense>
+                    {comments.map((c) => (
+                      <ListItem key={c.id} sx={{ py: 0.5, alignItems: 'flex-start' }}>
+                        <ListItemText
+                          primary={`${c.author?.username || '사용자'} · ${new Date(c.created_at).toLocaleString()}`}
+                          secondary={c.comment}
+                          sx={{ '& .MuiListItemText-primary': { fontSize: '0.72rem' }, '& .MuiListItemText-secondary': { fontSize: '0.78rem', whiteSpace: 'pre-wrap' } }}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                  <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                    <TextField
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleAddComment();
+                        }
+                      }}
+                      placeholder="코멘트를 입력하세요 (Enter: 등록, Shift+Enter: 줄바꿈)"
+                      size="small"
+                      fullWidth
+                      multiline
+                      maxRows={3}
+                    />
+                    <Button variant="contained" onClick={handleAddComment} sx={{ textTransform: 'none' }}>등록</Button>
+                  </Box>
+                </Grid>
+
+                {/* 재지정 */}
+                <Grid item xs={12}>
+                  <Divider sx={{ my: 2 }} />
+                  <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 600, mb: 1 }}>
+                    다른 승인자에게 다시 전달
+                  </Typography>
+                  <Grid container spacing={1}>
+                    <Grid item xs={12} md={5}>
+                      <Autocomplete
+                        options={filteredUsers}
+                        getOptionLabel={(option) => `${option.username} (${option.userid})`}
+                        value={filteredUsers.find(user => user.id.toString() === reassignUserId) || null}
+                        onChange={(event, newValue) => {
+                          setReassignUserId(newValue ? newValue.id.toString() : '');
+                        }}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="새 승인자"
+                            size="small"
+                            placeholder="새 승인자를 검색하세요..."
+                            sx={{ 
+                              '& .MuiOutlinedInput-root': { fontSize: '0.8rem' },
+                              '& .MuiInputLabel-root': { fontSize: '0.75rem' }
+                            }}
+                          />
+                        )}
+                        noOptionsText="승인 가능한 사용자가 없습니다"
+                        size="small"
+                        fullWidth
+                        sx={{
+                          '& .MuiAutocomplete-option': {
+                            fontSize: '0.8rem',
+                          }
+                        }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} md={7}>
+                      <TextField value={reassignNote} onChange={(e) => setReassignNote(e.target.value)} placeholder="메모 (선택)" fullWidth size="small" />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Button variant="outlined" onClick={handleReassign} sx={{ textTransform: 'none' }}>
+                        다시 전달
+                      </Button>
+                    </Grid>
+                  </Grid>
+                </Grid>
               </Grid>
             </Box>
           )}

@@ -4,6 +4,7 @@ import axios from 'axios';
 import DynamicPage from './DynamicPage';
 import MenuManagement from '../pages/MenuManagement';
 import InvoicePage from '../pages/InvoicePage';
+import EInvoicePage from '../pages/EInvoicePage';
 import { CircularProgress, Box, Typography } from '@mui/material';
 
 interface MenuItem {
@@ -55,6 +56,9 @@ const DynamicRouter: React.FC = () => {
         if (menu.url === '/accounting/invoices') {
           console.log('매출 관리 페이지 매핑됨!');
           component = <InvoicePage />;
+        } else if (menu.url === '/e-invoice' || menu.url === '/einvoice') {
+          console.log('E-Invoice 페이지 매핑됨!');
+          component = <EInvoicePage />;
         }
         
         console.log('라우트 추가:', menu.url, '컴포넌트:', component.type.name || 'DynamicPage');
@@ -123,6 +127,8 @@ const DynamicRouter: React.FC = () => {
       <Route path="/menus" element={<MenuManagement />} />
       <Route path="/invoices" element={<div>Invoice 관리</div>} />
       <Route path="/payments" element={<div>결제 관리</div>} />
+      <Route path="/e-invoice" element={<EInvoicePage />} />
+      <Route path="/einvoice" element={<EInvoicePage />} />
       
       {/* 404 페이지 */}
       <Route path="*" element={<DynamicPage menuData={{ name: '페이지를 찾을 수 없습니다' }} />} />

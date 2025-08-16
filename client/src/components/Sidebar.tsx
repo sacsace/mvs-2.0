@@ -233,9 +233,20 @@ const Sidebar: React.FC = () => {
         });
         
         if (response.data && response.data.success && response.data.data) {
-          // 계층 구조를 평면 구조로 변환
-          const flattenMenus = flattenMenuTree(response.data.data);
-          setMenus(menusWithRoute(flattenMenus));
+          console.log('🔍 받은 메뉴 트리 데이터:', response.data.data);
+          console.log('🔍 메뉴 개수:', response.data.data.length);
+          
+          // 회계 관리 메뉴 확인
+          const accountingMenu = response.data.data.find((menu: any) => menu.name === '회계 관리');
+          if (accountingMenu) {
+            console.log('✅ 회계 관리 메뉴 발견:', accountingMenu);
+            console.log('✅ 하위 메뉴 개수:', accountingMenu.children?.length || 0);
+          } else {
+            console.log('❌ 회계 관리 메뉴가 없습니다!');
+          }
+          
+          // 계층 구조를 유지해야 합니다! 평면화하지 말고 트리 구조 그대로 사용
+          setMenus(menusWithRoute(response.data.data));
         } else if (Array.isArray(response.data)) {
           setMenus(menusWithRoute(response.data));
         } else {

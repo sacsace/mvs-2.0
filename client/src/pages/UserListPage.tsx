@@ -47,6 +47,7 @@ import {
   Update as UpdateIcon
 } from '@mui/icons-material';
 import { useLanguage } from '../contexts/LanguageContext';
+import { filterUsersByPermission } from '../hooks/useMenuPermission';
 
 interface User {
   id: number;
@@ -503,10 +504,17 @@ const UserListPage: React.FC = () => {
                 sx={{ fontSize: '0.75rem' }}
               >
                 <MenuItem value="all" sx={{ fontSize: '0.75rem' }}>{t('all')}</MenuItem>
-                <MenuItem value="user" sx={{ fontSize: '0.75rem' }}>{t('regular')}</MenuItem>
-                <MenuItem value="admin" sx={{ fontSize: '0.75rem' }}>{t('admin')}</MenuItem>
-                <MenuItem value="audit" sx={{ fontSize: '0.75rem' }}>{t('audit')}</MenuItem>
-                <MenuItem value="root" sx={{ fontSize: '0.75rem' }}>{t('root')}</MenuItem>
+                {/* 권한 기반 역할 필터링 */}
+                {currentUser?.role === 'root' && (
+                  <>
+                    <MenuItem value="admin" sx={{ fontSize: '0.75rem' }}>{t('admin')}</MenuItem>
+                    <MenuItem value="audit" sx={{ fontSize: '0.75rem' }}>{t('audit')}</MenuItem>
+                    <MenuItem value="user" sx={{ fontSize: '0.75rem' }}>{t('regular')}</MenuItem>
+                  </>
+                )}
+                {(currentUser?.role === 'admin' || currentUser?.role === 'audit') && (
+                  <MenuItem value="user" sx={{ fontSize: '0.75rem' }}>{t('regular')}</MenuItem>
+                )}
               </Select>
             </FormControl>
 
@@ -812,11 +820,20 @@ const UserListPage: React.FC = () => {
                   
                   // 임시: 간단한 메뉴 아이템으로 테스트
                   console.log('간단한 메뉴 아이템 렌더링');
-                  return [
-                    <MenuItem key="admin" value="admin" sx={{ fontSize: '0.75rem' }}>Administrator</MenuItem>,
-                    <MenuItem key="audit" value="audit" sx={{ fontSize: '0.75rem' }}>Auditor</MenuItem>,
-                    <MenuItem key="user" value="user" sx={{ fontSize: '0.75rem' }}>User</MenuItem>
-                  ];
+                  // 권한 기반 역할 옵션 렌더링
+                  const roleOptions = [];
+                  if (currentUser?.role === 'root') {
+                    roleOptions.push(
+                      <MenuItem key="admin" value="admin" sx={{ fontSize: '0.75rem' }}>Administrator</MenuItem>,
+                      <MenuItem key="audit" value="audit" sx={{ fontSize: '0.75rem' }}>Auditor</MenuItem>,
+                      <MenuItem key="user" value="user" sx={{ fontSize: '0.75rem' }}>User</MenuItem>
+                    );
+                  } else if (currentUser?.role === 'admin' || currentUser?.role === 'audit') {
+                    roleOptions.push(
+                      <MenuItem key="user" value="user" sx={{ fontSize: '0.75rem' }}>User</MenuItem>
+                    );
+                  }
+                  return roleOptions;
                 })()}
                 {/* root는 자신과 같은 역할도 추가 가능하므로 별도 처리하지 않음 */}
               </Select>

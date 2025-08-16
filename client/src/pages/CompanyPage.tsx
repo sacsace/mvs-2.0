@@ -42,6 +42,7 @@ import {
   RemoveCircle as RemoveCircleIcon
 } from '@mui/icons-material';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useMenuPermission } from '../hooks/useMenuPermission';
 
 
 // 유틸리티 함수들
@@ -91,6 +92,7 @@ interface Company {
 
 const CompanyPage: React.FC = () => {
   const { t } = useLanguage();
+  const { permission: companyMenuPermission, currentUser } = useMenuPermission('회사 정보 관리');
   const [companies, setCompanies] = useState<Company[]>([]);
   const [currentCompany, setCurrentCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(true);
@@ -102,7 +104,6 @@ const CompanyPage: React.FC = () => {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
@@ -436,35 +437,10 @@ const CompanyPage: React.FC = () => {
   }, [debouncedSearchTerm]);
 
   useEffect(() => {
-    // 로컬 스토리지에서 사용자 정보 가져오기
-    let userData = JSON.parse(localStorage.getItem('user') || '{}');
-    console.log('Loading user data from localStorage:', userData);
-    
-    // localStorage에 사용자 정보가 없으면 JWT 토큰에서 추출
-    if (!userData || !userData.role) {
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          const payload = JSON.parse(atob(token.split('.')[1]));
-          console.log('Extracted user data from JWT:', payload);
-          userData = payload;
-        } catch (error) {
-          console.error('JWT 토큰 파싱 오류:', error);
-        }
-      }
-    }
-    
-    console.log('Final user data:', userData);
-    console.log('User role:', userData.role);
-    console.log('User company_id:', userData.company_id);
-    setCurrentUser(userData);
-  }, []);
-
-  useEffect(() => {
     if (currentUser) {
       fetchCompanies();
     }
-  }, [currentUser]);
+  }, [currentUser, fetchCompanies]);
 
   // 회사 추가 다이얼로그 열기
   const handleAddCompany = () => {
@@ -642,8 +618,8 @@ const CompanyPage: React.FC = () => {
             {t('companyManagement')}
           </Typography>
         </Box>
-        {/* root와 audit만 회사 추가 가능 */}
-        {(currentUser?.role === 'root' || currentUser?.role === 'audit') && (
+        {/* 회사 추가 권한 확인 */}
+        {companyMenuPermission.can_create && (
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -811,8 +787,8 @@ const CompanyPage: React.FC = () => {
                               <EditIcon sx={{ fontSize: 16 }} />
                             </IconButton>
                           </Tooltip>
-                          {/* root와 audit만 삭제 가능 */}
-                          {(currentUser?.role === 'root' || currentUser?.role === 'audit') && (
+                          {/* 삭제 권한 확인 */}
+                          {companyMenuPermission.can_delete && (
                             <Tooltip title={t('delete')}>
                               <IconButton
                                 size="small"
@@ -843,8 +819,8 @@ const CompanyPage: React.FC = () => {
               <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem' }}>
                 {currentCompany.name}
               </Typography>
-              {/* admin만 수정 가능 */}
-              {currentUser?.role === 'admin' && (
+              {/* 수정 권한 확인 */}
+              {companyMenuPermission.can_update && (
                 <Button
                   variant="outlined"
                   startIcon={<EditIcon />}

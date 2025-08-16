@@ -1,13 +1,18 @@
 import React, { useEffect, useState } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import { Box, Typography, Paper, Alert, Button } from "@mui/material";
 import axios from "axios";
+import { setupAxiosInterceptors, AuthUtils } from "./utils/auth";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 // API 기본 설정
 axios.defaults.baseURL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3001';
+
+// Axios 인터셉터 설정
+setupAxiosInterceptors();
 
 function App() {
   const [isInitialized, setIsInitialized] = useState<boolean | null>(null);
@@ -16,6 +21,9 @@ function App() {
   useEffect(() => {
     const checkSystemStatus = async () => {
       try {
+        // 애플리케이션 시작 시 기존 토큰이 있으면 axios 헤더에 설정
+        AuthUtils.setupAxiosToken();
+        
         const response = await axios.get("/api/init/status");
         setIsInitialized(response.data.initialized);
       } catch (error) {
@@ -97,8 +105,28 @@ function App() {
         ) : (
           // 시스템이 초기화된 경우
           <>
+            {/* 로그인 페이지 - 인증 불필요 */}
             <Route path="/login" element={<Login />} />
-            <Route path="/*" element={<Dashboard />} />
+            
+            {/* 기본 경로 리다이렉트 - 인증 상태에 따라 대시보드 또는 로그인으로 */}
+            <Route 
+              path="/" 
+              element={
+                AuthUtils.isLoggedIn() ? 
+                  <Navigate to="/dashboard" replace /> : 
+                  <Navigate to="/login" replace />
+              } 
+            />
+            
+            {/* 보호된 대시보드 및 모든 하위 경로 */}
+            <Route 
+              path="/*" 
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } 
+            />
           </>
         )}
       </Routes>

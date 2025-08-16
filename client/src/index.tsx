@@ -197,18 +197,7 @@ const currentHost = window.location.hostname;
 const serverPort = '3001';
 axios.defaults.baseURL = `http://${currentHost}:${serverPort}`;
 
-// Axios 인터셉터: 모든 요청에 JWT 토큰 자동 포함
-axios.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers = config.headers || {};
-      config.headers['Authorization'] = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+// axios 인터셉터는 auth.ts의 setupAxiosInterceptors에서 처리됩니다.
 
 const router = createBrowserRouter([
   {
@@ -224,10 +213,8 @@ const router = createBrowserRouter([
 const container = document.getElementById("root");
 const root = createRoot(container!);
 root.render(
-  <React.StrictMode>
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <RouterProvider router={router} />
-    </ThemeProvider>
-  </React.StrictMode>
+  <ThemeProvider theme={theme}>
+    <CssBaseline />
+    <RouterProvider router={router} />
+  </ThemeProvider>
 ); 

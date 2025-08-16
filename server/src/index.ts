@@ -10,14 +10,12 @@ import userRouter from './routes/user';
 import companyRouter from './routes/company';
 import menuRouter from './routes/menu';
 import menuPermissionRouter from './routes/menuPermission';
-import permissionRouter from './routes/permissions';
-import userPermissionRouter from './routes/userPermissions';
-import roleRouter from './routes/roles';
 import approvalRouter from './routes/approval';
 import accountingRouter from './routes/accounting';
 import invoiceRouter from './routes/invoice';
 import partnerRouter from './routes/partners';
 import dashboardRouter from './routes/dashboard';
+import einvoiceRouter from './routes/einvoice';
 import logger from './utils/logger';
 
 // 프로세스 에러 핸들링
@@ -67,14 +65,12 @@ app.use('/api/users', userRouter);
 app.use('/api/companies', companyRouter);
 app.use('/api/menu', menuRouter);
 app.use('/api/menu-permissions', menuPermissionRouter);
-app.use('/api/permissions', permissionRouter);
-app.use('/api/user-permissions', userPermissionRouter);
-app.use('/api/roles', roleRouter);
 app.use('/api/approval', approvalRouter);
 app.use('/api/accounting', accountingRouter);
 app.use('/api/invoice', invoiceRouter);
 app.use('/api/partners', partnerRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/e-invoice', einvoiceRouter);
 
 // 프로덕션에서 클라이언트 라우팅 처리
 if (process.env.NODE_ENV === 'production') {

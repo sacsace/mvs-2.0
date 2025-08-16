@@ -26,6 +26,7 @@ import {
   Collapse,
   CircularProgress,
   Button,
+  Badge,
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
@@ -34,9 +35,9 @@ import {
   Business as BusinessIcon,
   Security as SecurityIcon,
   Notifications as NotificationsIcon,
-  Settings as SettingsIcon,
   Logout as LogoutIcon,
   AdminPanelSettings as AdminIcon,
+  Info as InfoIcon,
   Language as LanguageIcon,
   ExpandMore as ExpandMoreIcon,
   Search as SearchIcon,
@@ -48,9 +49,6 @@ import { useLanguage } from '../contexts/LanguageContext';
 import UserListPage from './UserListPage';
 import MenuPermissionPage from './MenuPermissionPage';
 import CompanyPage from './CompanyPage';
-import PermissionManagementPage from './PermissionManagementPage';
-import UserPermissionManagementPage from './UserPermissionManagementPage';
-import RoleManagementPage from './RoleManagementPage';
 import PartnerPage from './PartnerPage';
 import ApprovalPage from './ApprovalPage';
 import AccountingStatisticsPage from './AccountingStatisticsPage';
@@ -119,6 +117,7 @@ const Dashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredMenus, setFilteredMenus] = useState<MenuItem[]>([]);
   const [languageMenuAnchor, setLanguageMenuAnchor] = useState<null | HTMLElement>(null);
+  const [notificationCount, setNotificationCount] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<string>('dashboard');
   const [currentMenu, setCurrentMenu] = useState<MenuItem | null>(null);
   const [loading, setLoading] = useState(true);
@@ -170,7 +169,8 @@ const Dashboard: React.FC = () => {
       const token = localStorage.getItem('token');
       console.log('메뉴 조회 시작, 토큰:', token ? '존재함' : '없음');
       
-      const url = '/api/menu/tree';
+      // 사용자 권한에 따른 메뉴만 받아오도록 변경
+      const url = '/api/menu';
       console.log('API URL:', url);
       
       console.log('fetch 요청 시작...');
@@ -221,6 +221,28 @@ const Dashboard: React.FC = () => {
       console.log('=== fetchMenus finally 블록 실행 ===');
       setLoading(false);
       console.log('fetchMenus 완료');
+    }
+  }, []);
+
+  const fetchNotificationCount = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      
+      const response = await fetch('/api/approval/count/received', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setNotificationCount(result.count);
+        }
+      }
+    } catch (error) {
+      console.error('알림 개수 조회 오류:', error);
     }
   }, []);
 
@@ -333,6 +355,8 @@ const Dashboard: React.FC = () => {
     fetchMenus();
     console.log('fetchStats 호출 시작');
     fetchStats();
+    console.log('fetchNotificationCount 호출 시작');
+    fetchNotificationCount();
   }, []); // 의존성 배열을 비워서 한 번만 실행되도록 함
 
   // 사용자 데이터가 로드된 후 회사 정보 가져오기
@@ -341,6 +365,42 @@ const Dashboard: React.FC = () => {
       fetchCompanyData();
     }
   }, [userData?.company_id, fetchCompanyData]);
+
+  // 알림 개수 주기적 업데이트 (30초마다)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchNotificationCount();
+    }, 30000); // 30초마다 업데이트
+
+    return () => clearInterval(interval);
+  }, [fetchNotificationCount]);
+
+  // localStorage 플래그 체크하여 알림 개수 즉시 업데이트
+  useEffect(() => {
+    const checkNotificationUpdate = () => {
+      const lastUpdated = localStorage.getItem('notificationUpdated');
+      if (lastUpdated) {
+        console.log('🔔 알림 업데이트 플래그 감지, 즉시 새로고침');
+        fetchNotificationCount();
+        localStorage.removeItem('notificationUpdated'); // 플래그 제거
+      }
+    };
+
+    // 주기적으로 플래그 체크 (5초마다)
+    const flagCheckInterval = setInterval(checkNotificationUpdate, 5000);
+
+    // 페이지 포커스시에도 체크
+    const handleFocus = () => {
+      checkNotificationUpdate();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(flagCheckInterval);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [fetchNotificationCount]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -986,7 +1046,7 @@ const Dashboard: React.FC = () => {
                     bgcolor: '#007aff',
                     fontSize: '0.75rem'
                   }}>
-                    <SettingsIcon />
+                    <InfoIcon />
                   </Avatar>
                 }
                 title={t('systemInfo')}
@@ -1400,21 +1460,6 @@ const Dashboard: React.FC = () => {
           return <CompanyPage />;
         }
 
-        // 권한 관리 페이지
-        if (currentMenu.url === '/permissions/manage') {
-          return <PermissionManagementPage />;
-        }
-
-        // 사용자 권한 관리 페이지
-        if (currentMenu.url === '/permissions/user') {
-          return <UserPermissionManagementPage />;
-        }
-
-        // 역할 관리 페이지
-        if (currentMenu.url === '/permissions/role' || currentMenu.url === '/permissions/roles') {
-          return <RoleManagementPage />;
-        }
-
         // 협력 업체 관리 페이지
         if (currentMenu.url === '/users/partners') {
           return <PartnerPage />;
@@ -1701,7 +1746,19 @@ const Dashboard: React.FC = () => {
                     '&:hover': { backgroundColor: '#f2f3f5' }
                   }}
                 >
-                  <NotificationsIcon sx={{ fontSize: '1.125rem' }} />
+                  <Badge 
+                    badgeContent={notificationCount} 
+                    color="error"
+                    sx={{
+                      '& .MuiBadge-badge': {
+                        fontSize: '0.75rem',
+                        height: 16,
+                        minWidth: 16
+                      }
+                    }}
+                  >
+                    <NotificationsIcon sx={{ fontSize: '1.125rem' }} />
+                  </Badge>
                 </IconButton>
               </Tooltip>
               
@@ -1763,19 +1820,7 @@ const Dashboard: React.FC = () => {
                 </MenuItem>
               </Menu>
               
-              <Tooltip title={t('settings')}>
-                <IconButton 
-                  size="small" 
-                  sx={{ 
-                    color: '#8b95a1',
-                    '&:hover': { backgroundColor: '#f2f3f5' }
-                  }}
-                >
-                  <SettingsIcon sx={{ fontSize: '1.125rem' }} />
-                </IconButton>
-              </Tooltip>
-              
-              <Divider orientation="vertical" flexItem sx={{ mx: 1, height: 28 }} />
+
               
               <Box display="flex" alignItems="center" gap={1.5}>
                 <Avatar 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { filterUsersByPermission } from '../hooks/useMenuPermission';
 
 import {
   Box,
@@ -181,6 +182,8 @@ interface MenuPermission {
 const MenuPermissionPage: React.FC = () => {
   const { t } = useLanguage();
   const [users, setUsers] = useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [menus, setMenus] = useState<Menu[]>([]);
   const [menuTree, setMenuTree] = useState<any[]>([]);
   const [permissions, setPermissions] = useState<MenuPermission[]>([]);
@@ -221,13 +224,32 @@ const MenuPermissionPage: React.FC = () => {
     }
   }, [selectedUser]);
 
-  // 메뉴 트리 로드 시 모든 메뉴를 접은 상태로 설정 (기본값)
-  useEffect(() => {
-    if (menuTree.length > 0) {
-      // 모든 메뉴를 접은 상태로 초기화
-      setExpandedMenus(new Set());
+  // 트리 확장 상태는 사용자의 조작을 그대로 유지한다.
+  // 메뉴 데이터가 새로 로드되더라도 임의로 접지 않는다.
+
+  const fetchCurrentUser = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/users/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Current user:', data.user);
+        setCurrentUser(data.user);
+        return data.user;
+      } else {
+        console.error('현재 사용자 조회 실패:', response.status);
+        return null;
+      }
+    } catch (error) {
+      console.error('현재 사용자 조회 오류:', error);
+      return null;
     }
-  }, [menuTree]);
+  }, []);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -241,18 +263,29 @@ const MenuPermissionPage: React.FC = () => {
       if (response.ok) {
         const data = await response.json();
         setUsers(data);
+        
+        // 현재 사용자 정보가 있으면 필터링 적용
+        if (currentUser) {
+          const filtered = filterUsersByPermission(data, currentUser.role);
+          console.log('Filtered users by permission:', filtered);
+          setFilteredUsers(filtered);
+        } else {
+          setFilteredUsers(data);
+        }
         setError(null);
       } else {
         console.error('사용자 목록 조회 실패:', response.status);
         // 사용자 목록이 없어도 메뉴 트리는 보이도록 에러를 설정하지 않음
         setUsers([]);
+        setFilteredUsers([]);
       }
     } catch (error) {
       console.error('사용자 목록 조회 오류:', error);
       // 사용자 목록이 없어도 메뉴 트리는 보이도록 에러를 설정하지 않음
       setUsers([]);
+      setFilteredUsers([]);
     }
-  }, []);
+  }, [currentUser]);
 
   const fetchMenus = useCallback(async () => {
     try {
@@ -297,9 +330,19 @@ const MenuPermissionPage: React.FC = () => {
 
   // 초기 데이터 로드
   useEffect(() => {
-    fetchUsers();
-    fetchMenus();
-  }, [fetchUsers, fetchMenus]);
+    const initializeData = async () => {
+      await fetchCurrentUser();
+      fetchMenus();
+    };
+    initializeData();
+  }, [fetchCurrentUser, fetchMenus]);
+
+  // 현재 사용자 정보가 로드된 후 사용자 목록 가져오기
+  useEffect(() => {
+    if (currentUser) {
+      fetchUsers();
+    }
+  }, [currentUser, fetchUsers]);
 
   const flattenMenuTree = (menuTree: any[]): Menu[] => {
     const result: Menu[] = [];
@@ -373,10 +416,7 @@ const MenuPermissionPage: React.FC = () => {
       setPermissions(prev => [...prev, newPermission]);
     }
     
-    // 조회 권한이 변경된 경우 메뉴 트리 재렌더링을 위해 강제 업데이트
-    if (permissionType === 'can_read') {
-      setMenuTree(prev => [...prev]); // 배열을 새로 생성하여 리렌더링 트리거
-    }
+    // 리렌더링은 permissions 상태 변경으로 충분하므로 별도 트리 강제 업데이트 불필요
     
     console.log('========================');
   };
@@ -666,7 +706,7 @@ const MenuPermissionPage: React.FC = () => {
     }
   };
 
-  const filteredUsers = users.filter(user =>
+  const searchFilteredUsers = filteredUsers.filter(user =>
     user.username.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -1068,6 +1108,7 @@ const MenuPermissionPage: React.FC = () => {
                                      </TableCell>
                          {selectedUser && (
                            <>
+
                              <TableCell align="center">
                                <Checkbox
                                  checked={permission.can_read}
@@ -1120,8 +1161,18 @@ const MenuPermissionPage: React.FC = () => {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <SecurityIcon sx={{ fontSize: 20, color: '#1976d2' }} />
           <Typography variant="h6" component="h1" sx={{ fontWeight: 600 }}>
-            메뉴 권한 관리
+            사용자 권한 관리
           </Typography>
+          <Chip 
+            label="통합 권한 관리" 
+            size="small" 
+            sx={{ 
+              backgroundColor: '#e3f2fd',
+              color: '#1976d2',
+              fontWeight: 600,
+              fontSize: '0.7rem'
+            }} 
+          />
         </Box>
       </Box>
 
@@ -1169,7 +1220,7 @@ const MenuPermissionPage: React.FC = () => {
               <MenuItem value="">
                 <em>사용자를 선택하세요</em>
               </MenuItem>
-              {filteredUsers.map(user => (
+              {searchFilteredUsers.map(user => (
                 <MenuItem key={user.id} value={user.id}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <span>사용자명: {user.username}</span>
@@ -1266,7 +1317,7 @@ const MenuPermissionPage: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {selectedUser ? renderMenuTree(filterMenusByPermission(menuTree)) : renderMenuTree(menuTree)}
+                  {renderMenuTree(menuTree)}
                 </TableBody>
               </Table>
             </TableContainer>

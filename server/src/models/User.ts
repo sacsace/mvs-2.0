@@ -13,6 +13,7 @@ class User extends Model {
   public is_deleted!: boolean;
   public create_date!: Date;
   public update_date!: Date;
+  public last_notification_check?: Date;
 
   public async comparePassword(candidatePassword: string): Promise<boolean> {
     return bcrypt.compare(candidatePassword, this.password);
@@ -64,6 +65,10 @@ User.init(
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
     },
+    last_notification_check: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
   },
   {
     sequelize,
@@ -71,14 +76,19 @@ User.init(
     tableName: 'user',
     timestamps: false,
     hooks: {
+      // 비밀번호는 항상 여기서만 해싱한다. 이미 해시 형태($2a/$2b/$2y$)면 재해싱하지 않음
       beforeCreate: async (user: User) => {
-        if (user.password && !user.password.startsWith('$2a$')) {
+        const isHashed = typeof user.password === 'string' && /^\$2[aby]\$/.test(user.password);
+        if (user.password && !isHashed) {
           user.password = await bcrypt.hash(user.password, 10);
         }
       },
       beforeUpdate: async (user: User) => {
-        if (user.changed('password') && !user.password.startsWith('$2a$')) {
-          user.password = await bcrypt.hash(user.password, 10);
+        if (user.changed('password')) {
+          const isHashed = typeof user.password === 'string' && /^\$2[aby]\$/.test(user.password);
+          if (user.password && !isHashed) {
+            user.password = await bcrypt.hash(user.password, 10);
+          }
         }
       },
     },

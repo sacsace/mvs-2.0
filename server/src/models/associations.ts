@@ -8,6 +8,7 @@ import RolePermission from './RolePermission';
 import UserPermission from './UserPermission';
 import Approval from './Approval';
 import ApprovalFile from './ApprovalFile';
+import ApprovalComment from './ApprovalComment';
 import Transaction from './Transaction';
 import Invoice from './Invoice';
 
@@ -57,6 +58,12 @@ ApprovalFile.belongsTo(Approval, { foreignKey: 'approval_id', as: 'approval' });
 ApprovalFile.belongsTo(User, { foreignKey: 'uploaded_by', as: 'uploader' });
 User.hasMany(ApprovalFile, { foreignKey: 'uploaded_by', as: 'uploadedFiles' });
 
+// ApprovalComment 관계
+Approval.hasMany(ApprovalComment, { foreignKey: 'approval_id', as: 'comments' });
+ApprovalComment.belongsTo(Approval, { foreignKey: 'approval_id', as: 'approval' });
+ApprovalComment.belongsTo(User, { foreignKey: 'user_id', as: 'author' });
+User.hasMany(ApprovalComment, { foreignKey: 'user_id', as: 'approvalComments' });
+
 // Transaction 관련 관계
 Transaction.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
 Company.hasMany(Transaction, { foreignKey: 'company_id', as: 'transactions' });
@@ -84,6 +91,7 @@ export {
   UserPermission,
   Approval,
   ApprovalFile,
+  ApprovalComment,
   Transaction,
   Invoice
 }; 

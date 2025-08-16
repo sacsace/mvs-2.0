@@ -5,10 +5,11 @@ import CompanyGst from './CompanyGst';
 import User from './User';
 import Menu from './Menu';
 import MenuPermission from './MenuPermission';
-import Permission from './Permission';
-import Role from './Role';
-import RolePermission from './RolePermission';
-import UserPermission from './UserPermission';
+// 권한 관리 시스템 단순화로 인해 제거됨
+// import Permission from './Permission';
+// import Role from './Role';
+// import RolePermission from './RolePermission';
+// import UserPermission from './UserPermission';
 import Approval from './Approval';
 import ApprovalFile from './ApprovalFile';
 import Transaction from './Transaction';
@@ -33,10 +34,10 @@ interface DbModels {
   User: typeof User;
   Menu: typeof Menu;
   MenuPermission: typeof MenuPermission;
-  Permission: typeof Permission;
-  Role: typeof Role;
-  RolePermission: typeof RolePermission;
-  UserPermission: typeof UserPermission;
+  // Permission: typeof Permission;
+  // Role: typeof Role;
+  // RolePermission: typeof RolePermission;
+  // UserPermission: typeof UserPermission;
   Approval: typeof Approval;
   ApprovalFile: typeof ApprovalFile;
   Transaction: typeof Transaction;
@@ -51,10 +52,10 @@ const db: DbModels = {
   User,
   Menu,
   MenuPermission,
-  Permission,
-  Role,
-  RolePermission,
-  UserPermission,
+  // Permission,
+  // Role,
+  // RolePermission,
+  // UserPermission,
   Approval,
   ApprovalFile,
   Transaction
@@ -73,10 +74,10 @@ export {
   Company,
   Menu,
   MenuPermission,
-  Permission,
-  Role,
-  RolePermission,
-  UserPermission,
+  // Permission,
+  // Role,
+  // RolePermission,
+  // UserPermission,
   Approval,
   ApprovalFile,
   Transaction

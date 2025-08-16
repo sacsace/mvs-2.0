@@ -30,7 +30,9 @@ import {
   Card,
   CardContent,
   Tooltip,
-  Snackbar
+  Snackbar,
+  Tabs,
+  Tab
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -46,6 +48,7 @@ import {
 } from '@mui/icons-material';
 import { useLanguage } from '../contexts/LanguageContext';
 import html2pdf from 'html2pdf.js';
+import EInvoicePage from './EInvoicePage';
 
 interface Invoice {
   id: number;
@@ -114,6 +117,9 @@ const InvoicePage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterType, setFilterType] = useState<string>('all');
+  
+  // 탭 상태
+  const [activeTab, setActiveTab] = useState(0);
 
   // 다이얼로그 상태
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -308,6 +314,11 @@ const InvoicePage: React.FC = () => {
     setPage(0);
   };
 
+  // 탭 변경 핸들러
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setActiveTab(newValue);
+  };
+
   const handleViewInvoice = (invoice: Invoice) => {
     setViewingInvoice(invoice);
     setViewDialogOpen(true);
@@ -366,112 +377,33 @@ const InvoicePage: React.FC = () => {
         website: currentCompany?.website || ''
       };
       
-      setInvoiceFormData({
+      // 인라인 폼용 기본값 세팅
+      setFormData({
         invoice_number: invoiceNumber,
-        invoice_type: 'regular' as 'regular' | 'e-invoice' | 'lotus' | 'proforma',
-        invoice_date: new Date().toISOString().split('T')[0],
+        invoice_type: 'regular',
         partner_company_id: defaultCompanyId,
-        customer_input_type: 'existing' as 'existing' | 'manual',
-        manual_customer: {
-          name: '',
-          address: '',
-          gst: ''
-        },
-        service_items: [
-          {
-            description: '',
-            hsn_code: '998314',
-            igst_rate: 18,
-            cgst_rate: 9,
-            sgst_rate: 9,
-            quantity: 1,
-            unit_price: 0,
-            subtotal: 0,
-            igst_amount: 0,
-            cgst_amount: 0,
-            sgst_amount: 0,
-            total_amount: 0
-          }
-        ],
-        notes: '',
-        terms_conditions: 'Payment due within 30 days\nLate payment may incur additional charges',
-        header_info: headerInfo
+        invoice_date: new Date().toISOString().split('T')[0],
+        due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        subtotal: 0,
+        tax_amount: 0,
+        total_amount: 0,
+        currency: 'INR',
+        description: '',
+        notes: ''
       });
-      setInvoiceFormDialogOpen(true);
+      // 필요 시 headerInfo는 별도 상태에 저장해 사용할 수 있음
     } catch (error) {
       console.error('인보이스 번호 생성 오류:', error);
       setError('Failed to generate invoice number.');
     }
   };
 
-  const handleCreateEInvoice = async () => {
-    console.log('=== E-Invoice 생성 ===');
-    
-    // 현재 사용자 회사로 기본 설정
-    const defaultCompanyId = currentUser?.company_id || 1;
-    
-    // 인보이스 번호 자동 생성
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/invoice/generate-number/e-invoice', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      
-      let invoiceNumber = '';
-      if (response.ok) {
-        const data = await response.json();
-        invoiceNumber = data.invoice_number;
-      }
-      
-      // 헤더 정보를 현재 회사 정보로 초기화
-      const headerInfo = {
-        company_name: currentCompany?.name || '',
-        address: currentCompany?.address || '',
-        gstin: currentCompany?.gst1 || '',
-        cin: currentCompany?.coi || '',
-        email: currentCompany?.email || '',
-        website: currentCompany?.website || ''
-      };
-      
-      setInvoiceFormData({
-        invoice_number: invoiceNumber,
-        invoice_type: 'e-invoice' as 'regular' | 'e-invoice' | 'lotus' | 'proforma',
-        invoice_date: new Date().toISOString().split('T')[0],
-        partner_company_id: defaultCompanyId,
-        customer_input_type: 'existing' as 'existing' | 'manual',
-        manual_customer: {
-          name: '',
-          address: '',
-          gst: ''
-        },
-        service_items: [
-          {
-            description: '',
-            hsn_code: '998314',
-            igst_rate: 18,
-            cgst_rate: 9,
-            sgst_rate: 9,
-            quantity: 1,
-            unit_price: 0,
-            subtotal: 0,
-            igst_amount: 0,
-            cgst_amount: 0,
-            sgst_amount: 0,
-            total_amount: 0
-          }
-        ],
-        notes: '',
-        terms_conditions: 'Payment due within 30 days\nLate payment may incur additional charges',
-        header_info: headerInfo
-      });
-      setInvoiceFormDialogOpen(true);
-    } catch (error) {
-      console.error('인보이스 번호 생성 오류:', error);
-      setError('Failed to generate invoice number.');
+  // Regular 탭 진입 시 자동으로 신규 인보이스 번호 발급 및 폼 초기화
+  useEffect(() => {
+    if (activeTab === 1 && !formData.invoice_number) {
+      handleCreateRegularInvoice();
     }
-  };
+  }, [activeTab]);
 
   const handleCreateProformaInvoice = async () => {
     console.log('=== Proforma Invoice 생성 ===');
@@ -1832,75 +1764,36 @@ const InvoicePage: React.FC = () => {
             Invoice Management
           </Typography>
         </Box>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            variant="contained"
-            startIcon={<DescriptionIcon />}
-            onClick={handleCreateRegularInvoice}
-            sx={{ 
-              fontSize: '0.75rem', 
-              textTransform: 'none', 
-              boxShadow: 'none', 
-              borderRadius: 2, 
-              py: 0.8, 
-              px: 2, 
-              bgcolor: '#2e7d32', 
-              '&:hover': { bgcolor: '#1b5e20' } 
-            }}
-          >
-            Create Regular Invoice
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<ReceiptLongIcon />}
-            onClick={handleCreateEInvoice}
-            sx={{ 
-              fontSize: '0.75rem', 
-              textTransform: 'none', 
-              boxShadow: 'none', 
-              borderRadius: 2, 
-              py: 0.8, 
-              px: 2, 
-              bgcolor: '#ed6c02', 
-              '&:hover': { bgcolor: '#e65100' } 
-            }}
-          >
-            Create E-Invoice
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<ReceiptIcon />}
-            onClick={handleCreateProformaInvoice}
-            sx={{ 
-              fontSize: '0.75rem', 
-              textTransform: 'none', 
-              boxShadow: 'none', 
-              borderRadius: 2, 
-              py: 0.8, 
-              px: 2, 
-              bgcolor: '#9c27b0', 
-              '&:hover': { bgcolor: '#7b1fa2' } 
-            }}
-          >
-            Create Proforma Invoice
-          </Button>
-        </Box>
+
       </Box>
 
-      {/* 에러 메시지 */}
-      {error && (
-        <Alert severity="error" sx={{ mb: 2, fontSize: '0.85rem' }}>
-          {error}
-          <Box sx={{ mt: 1, p: 1, bgcolor: 'rgba(255,255,255,0.1)', borderRadius: 1 }}>
-            <Typography variant="body2" sx={{ fontSize: '0.75rem', color: 'inherit' }}>
-              Debug Info: Token {localStorage.getItem('token') ? 'Exists' : 'Not found'} | 
-              User {localStorage.getItem('user') ? 'Exists' : 'Not found'}
-            </Typography>
-          </Box>
-        </Alert>
-      )}
+      {/* 탭 네비게이션 */}
+      <Box sx={{ mb: 3 }}>
+        <Tabs value={activeTab} onChange={handleTabChange} aria-label="invoice management tabs">
+          <Tab label="Invoice List" />
+          <Tab label="Regular Invoice Creation" />
+          <Tab label="E-Invoice Creation" />
+          <Tab label="Proforma Invoice Creation" />
+        </Tabs>
+      </Box>
 
-      {/* 필터 및 검색 */}
+      {/* 탭 내용 */}
+      {activeTab === 0 && (
+        <>
+          {/* 에러 메시지 */}
+          {error && (
+            <Alert severity="error" sx={{ mb: 2, fontSize: '0.85rem' }}>
+              {error}
+              <Box sx={{ mt: 1, p: 1, bgcolor: 'rgba(255,255,255,0.1)', borderRadius: 1 }}>
+                <Typography variant="body2" sx={{ fontSize: '0.75rem', color: 'inherit' }}>
+                  Debug Info: Token {localStorage.getItem('token') ? 'Exists' : 'Not found'} | 
+                  User {localStorage.getItem('user') ? 'Exists' : 'Not found'}
+                </Typography>
+              </Box>
+            </Alert>
+          )}
+
+          {/* 필터 및 검색 */}
       <Card sx={{ mb: 3, boxShadow: '0 4px 24px rgba(25, 118, 210, 0.10)', borderRadius: 3, border: '1px solid #e3eafc' }}>
         <CardContent sx={{ p: 2 }}>
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -3132,21 +3025,404 @@ const InvoicePage: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* 성공 메시지 Snackbar */}
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={() => setSnackbarOpen(false)}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
-        <Alert 
-          onClose={() => setSnackbarOpen(false)} 
-          severity="success" 
-          sx={{ width: '100%' }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
+          {/* 성공 메시지 Snackbar */}
+          <Snackbar
+            open={snackbarOpen}
+            autoHideDuration={3000}
+            onClose={() => setSnackbarOpen(false)}
+            anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+          >
+            <Alert 
+              onClose={() => setSnackbarOpen(false)} 
+              severity="success" 
+              sx={{ width: '100%' }}
+            >
+              {snackbarMessage}
+            </Alert>
+          </Snackbar>
+        </>
+      )}
+
+      {/* Regular Invoice 인라인 생성 탭 */}
+      {activeTab === 1 && (
+        <Card sx={{ mb: 3, borderRadius: 3, border: '1px solid #e3eafc', boxShadow: '0 4px 24px rgba(25, 118, 210, 0.08)' }}>
+          <CardContent sx={{ p: 2 }}>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 700, fontSize: '0.95rem' }}>
+              Regular Invoice Creation
+            </Typography>
+            <Box sx={{ pt: 1 }}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Invoice Number"
+                    value={formData.invoice_number}
+                    onChange={(e) => setFormData({ ...formData, invoice_number: e.target.value })}
+                    sx={{ 
+                      mb: 2, 
+                      '& .MuiInputLabel-root': { fontSize: '0.75rem' }, 
+                      '& .MuiInputBase-input': { fontSize: '0.75rem' },
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        '& fieldset': {
+                          borderColor: '#e0e0e0',
+                        },
+                        '&:hover fieldset': {
+                          borderColor: '#1976d2',
+                        },
+                      }
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth sx={{ mb: 2 }}>
+                    <InputLabel sx={{ fontSize: '0.75rem' }}>Invoice Type</InputLabel>
+                    <Select
+                      value={formData.invoice_type}
+                      label="Invoice Type"
+                      onChange={(e) => setFormData({ ...formData, invoice_type: e.target.value as any })}
+                      sx={{ 
+                        '& .MuiSelect-select': { fontSize: '0.75rem' },
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                          '& fieldset': {
+                            borderColor: '#e0e0e0',
+                          },
+                          '&:hover fieldset': {
+                            borderColor: '#1976d2',
+                          },
+                        }
+                      }}
+                    >
+                      <MenuItem value="regular" sx={{ fontSize: '0.75rem' }}>Regular Invoice</MenuItem>
+                      <MenuItem value="e-invoice" sx={{ fontSize: '0.75rem' }}>E-Invoice</MenuItem>
+                      <MenuItem value="proforma" sx={{ fontSize: '0.75rem' }}>Proforma Invoice</MenuItem>
+                      <MenuItem value="lotus" sx={{ fontSize: '0.75rem' }} disabled={!canUseLotusInvoice()}>
+                        Lotus Invoice {!canUseLotusInvoice() && '(Minsub Ventures Private Limited only)'}
+                      </MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth sx={{ mb: 2 }}>
+                    <InputLabel sx={{ fontSize: '0.75rem' }}>Customer</InputLabel>
+                    <Select
+                      value={formData.partner_company_id.toString()}
+                      label="Customer"
+                      onChange={(e) => setFormData({ ...formData, partner_company_id: parseInt(e.target.value) })}
+                      sx={{ 
+                        '& .MuiSelect-select': { fontSize: '0.75rem' },
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                          '& fieldset': {
+                            borderColor: '#e0e0e0',
+                          },
+                          '&:hover fieldset': {
+                            borderColor: '#1976d2',
+                          },
+                        }
+                      }}
+                    >
+                      {companies.map(company => (
+                        <MenuItem key={company.company_id} value={company.company_id.toString()} sx={{ fontSize: '0.75rem' }}>
+                          {company.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Currency"
+                    value="INR"
+                    InputProps={{ readOnly: true }}
+                    sx={{ 
+                      mb: 2, 
+                      '& .MuiInputLabel-root': { fontSize: '0.75rem' }, 
+                      '& .MuiInputBase-input': { fontSize: '0.75rem' },
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        backgroundColor: '#f5f5f5',
+                        '& fieldset': {
+                          borderColor: '#e0e0e0',
+                        },
+                      }
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    type="date"
+                    label="Issue Date"
+                    value={formData.invoice_date}
+                    onChange={(e) => setFormData({ ...formData, invoice_date: e.target.value })}
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ 
+                      mb: 2, 
+                      '& .MuiInputLabel-root': { fontSize: '0.75rem' }, 
+                      '& .MuiInputBase-input': { fontSize: '0.75rem' },
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        '& fieldset': {
+                          borderColor: '#e0e0e0',
+                        },
+                        '&:hover fieldset': {
+                          borderColor: '#1976d2',
+                        },
+                      }
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    type="date"
+                    label="Due Date"
+                    value={formData.due_date}
+                    onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ 
+                      mb: 2, 
+                      '& .MuiInputLabel-root': { fontSize: '0.75rem' }, 
+                      '& .MuiInputBase-input': { fontSize: '0.75rem' },
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        '& fieldset': {
+                          borderColor: '#e0e0e0',
+                        },
+                        '&:hover fieldset': {
+                          borderColor: '#1976d2',
+                        },
+                      }
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label="Subtotal"
+                    value={formData.subtotal}
+                    onChange={(e) => {
+                      const subtotal = parseFloat(e.target.value) || 0;
+                      const taxAmount = formData.tax_amount;
+                      setFormData({ 
+                        ...formData, 
+                        subtotal,
+                        total_amount: subtotal + taxAmount
+                      });
+                    }}
+                    sx={{ 
+                      mb: 2, 
+                      '& .MuiInputLabel-root': { fontSize: '0.75rem' }, 
+                      '& .MuiInputBase-input': { fontSize: '0.75rem' },
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        '& fieldset': {
+                          borderColor: '#e0e0e0',
+                        },
+                        '&:hover fieldset': {
+                          borderColor: '#1976d2',
+                        },
+                      }
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label="Tax"
+                    value={formData.tax_amount}
+                    onChange={(e) => {
+                      const taxAmount = parseFloat(e.target.value) || 0;
+                      const subtotal = formData.subtotal;
+                      setFormData({ 
+                        ...formData, 
+                        tax_amount: taxAmount,
+                        total_amount: subtotal + taxAmount
+                      });
+                    }}
+                    sx={{ 
+                      mb: 2, 
+                      '& .MuiInputLabel-root': { fontSize: '0.75rem' }, 
+                      '& .MuiInputBase-input': { fontSize: '0.75rem' },
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        '& fieldset': {
+                          borderColor: '#e0e0e0',
+                        },
+                        '&:hover fieldset': {
+                          borderColor: '#1976d2',
+                        },
+                      }
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label="Total Amount"
+                    value={formData.total_amount}
+                    InputProps={{ readOnly: true }}
+                    sx={{ 
+                      mb: 2, 
+                      '& .MuiInputLabel-root': { fontSize: '0.75rem' }, 
+                      '& .MuiInputBase-input': { fontSize: '0.75rem' },
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        backgroundColor: '#f5f5f5',
+                        '& fieldset': {
+                          borderColor: '#e0e0e0',
+                        },
+                      }
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={3}
+                    label="Description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    sx={{ 
+                      mb: 2, 
+                      '& .MuiInputLabel-root': { fontSize: '0.75rem' }, 
+                      '& .MuiInputBase-input': { fontSize: '0.75rem' },
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        '& fieldset': {
+                          borderColor: '#e0e0e0',
+                        },
+                        '&:hover fieldset': {
+                          borderColor: '#1976d2',
+                        },
+                      }
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={2}
+                    label="Notes"
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    sx={{ 
+                      mb: 2, 
+                      '& .MuiInputLabel-root': { fontSize: '0.75rem' }, 
+                      '& .MuiInputBase-input': { fontSize: '0.75rem' },
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        '& fieldset': {
+                          borderColor: '#e0e0e0',
+                        },
+                        '&:hover fieldset': {
+                          borderColor: '#1976d2',
+                        },
+                      }
+                    }}
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1 }}>
+              <Button 
+                onClick={() => {
+                  // 간단 초기화
+                  setFormData({
+                    invoice_number: '',
+                    invoice_type: 'regular',
+                    partner_company_id: currentUser?.company_id || 1,
+                    invoice_date: new Date().toISOString().split('T')[0],
+                    due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                    subtotal: 0,
+                    tax_amount: 0,
+                    total_amount: 0,
+                    currency: 'INR',
+                    description: '',
+                    notes: ''
+                  });
+                }} 
+                sx={{ 
+                  fontSize: '0.75rem',
+                  textTransform: 'none',
+                  borderRadius: 2,
+                  py: 0.8,
+                  px: 2
+                }}
+              >
+                Reset
+              </Button>
+              <Button 
+                onClick={handleSaveInvoice} 
+                variant="contained" 
+                sx={{ 
+                  fontSize: '0.75rem',
+                  textTransform: 'none',
+                  boxShadow: 'none',
+                  borderRadius: 2,
+                  py: 0.8,
+                  px: 2,
+                  bgcolor: '#1976d2',
+                  '&:hover': { bgcolor: '#145ea8' }
+                }}
+              >
+                Save Invoice
+              </Button>
+            </Box>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* E-Invoice 생성 탭 */}
+      {activeTab === 2 && (
+        <EInvoicePage />
+      )}
+
+      {/* Proforma Invoice 생성 탭 */}
+      {activeTab === 3 && (
+        <Box sx={{ p: 3 }}>
+          <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
+            Proforma Invoice Creation
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
+            Proforma 인보이스 생성 기능을 여기에 구현할 예정입니다.
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<ReceiptIcon />}
+            onClick={handleCreateProformaInvoice}
+            sx={{ 
+              fontSize: '0.75rem', 
+              textTransform: 'none', 
+              boxShadow: 'none', 
+              borderRadius: 2, 
+              py: 0.8, 
+              px: 2, 
+              bgcolor: '#9c27b0', 
+              '&:hover': { bgcolor: '#7b1fa2' } 
+            }}
+          >
+            Create Proforma Invoice
+          </Button>
+        </Box>
+      )}
     </Box>
   );
 };

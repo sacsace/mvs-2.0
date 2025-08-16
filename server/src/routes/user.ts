@@ -67,17 +67,39 @@ router.get('/', authMiddleware, async (req: Request & { user?: any }, res: Respo
 
     let whereCondition: any = { is_deleted: false };
 
-    // 권한에 따른 필터링
+    // 메뉴 권한 기반 권한 체크
     if (currentUser?.role === 'root') {
       // root는 모든 사용자 조회 가능
       logger.info('Root user - showing all users');
-    } else if (currentUser?.role === 'admin' || currentUser?.role === 'audit') {
-      // admin과 audit는 같은 회사 사용자만 조회 가능
-      whereCondition.company_id = currentUser.company_id;
-      logger.info(`${currentUser.role} user - showing users from company_id: ${currentUser.company_id}`);
     } else {
-      // regular 사용자는 사용자 목록 조회 불가
-      return res.status(403).json({ error: '사용자 목록을 조회할 권한이 없습니다.' });
+      // 다른 사용자들은 메뉴 권한 체크
+      const { QueryTypes } = require('sequelize');
+      const menuPermission = await User.sequelize?.query(
+        `SELECT mp.can_read FROM menu_permission mp 
+         JOIN menu m ON mp.menu_id = m.menu_id 
+         WHERE mp.user_id = ? AND m.name = '사용자 관리' AND mp.can_read = 1`,
+        { 
+          replacements: [currentUser.id], 
+          type: QueryTypes.SELECT 
+        }
+      );
+
+      if (!menuPermission || (menuPermission as any[]).length === 0) {
+        logger.info(`User ${currentUser.userid} does not have permission to view user management`);
+        return res.status(403).json({ error: '사용자 목록을 조회할 권한이 없습니다.' });
+      }
+
+      logger.info(`User ${currentUser.userid} has menu permission for user management`);
+
+      // admin과 audit는 같은 회사 사용자만, user는 자신만 조회 가능
+      if (currentUser?.role === 'admin' || currentUser?.role === 'audit') {
+        whereCondition.company_id = currentUser.company_id;
+        logger.info(`${currentUser.role} user - showing users from company_id: ${currentUser.company_id}`);
+      } else if (currentUser?.role === 'user') {
+        // 일반 사용자는 같은 회사 사용자 조회 가능
+        whereCondition.company_id = currentUser.company_id;
+        logger.info(`User role - showing users from company_id: ${currentUser.company_id}`);
+      }
     }
 
     const users = await User.findAll({
@@ -127,6 +149,10 @@ router.post('/', authMiddleware, async (req: Request & { user?: any }, res: Resp
     }
 
     // 역할 권한 검증
+    // auditor('audit')는 root만 부여 가능
+    if (role === 'audit' && currentUser?.role !== 'root') {
+      return res.status(403).json({ error: 'auditor 역할은 root만 부여할 수 있습니다.' });
+    }
     if (currentUser?.role === 'admin') {
       // 관리자는 일반 사용자만 추가 가능
       if (role !== 'user') {
@@ -144,15 +170,11 @@ router.post('/', authMiddleware, async (req: Request & { user?: any }, res: Resp
       }
     }
 
-    // 비밀번호 해싱
-    const bcrypt = require('bcrypt');
-    const hashedPassword = await bcrypt.hash(password, 10);
-
     // 사용자 생성
     const user = await User.create({
       userid,
       username,
-      password: hashedPassword,
+      password, // 모델 훅에서 해싱 처리
       role,
       company_id,
       default_language: default_language || 'ko', // 기본값은 한국어
@@ -211,6 +233,10 @@ router.put('/:id', authMiddleware, async (req: Request & { user?: any }, res: Re
     }
 
     // 역할 권한 검증
+    // auditor('audit')는 root만 부여/변경 가능
+    if (role === 'audit' && currentUser?.role !== 'root') {
+      return res.status(403).json({ error: 'auditor 역할은 root만 부여하거나 변경할 수 있습니다.' });
+    }
     if (currentUser?.role === 'admin') {
       // 관리자는 일반 사용자로만 변경 가능
       if (role !== 'user') {
@@ -238,13 +264,11 @@ router.put('/:id', authMiddleware, async (req: Request & { user?: any }, res: Re
       update_date: new Date()
     };
 
-    // 비밀번호가 제공된 경우 해싱하여 업데이트
+    // 비밀번호가 제공된 경우: 모델 훅에서 해싱 처리
     if (password && password.trim() !== '') {
       console.log('비밀번호 업데이트 수행');
-      const bcrypt = require('bcrypt');
-      const hashedPassword = await bcrypt.hash(password, 10);
-      updateData.password = hashedPassword;
-      console.log('비밀번호 해싱 완료');
+      updateData.password = password;
+      console.log('비밀번호 값 설정 (해싱은 모델 훅에서 처리)');
     } else {
       console.log('비밀번호 업데이트 없음');
     }

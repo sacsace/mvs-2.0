@@ -10,9 +10,14 @@ import {
   CircularProgress,
   Alert,
   InputAdornment,
-  IconButton
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  DialogContentText
 } from '@mui/material';
-import { Visibility, VisibilityOff } from '@mui/icons-material';
+import { Visibility, VisibilityOff, Warning as WarningIcon } from '@mui/icons-material';
 import Logo from '../components/Logo';
 import Footer from '../components/Footer';
 
@@ -25,6 +30,11 @@ const Login: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showExpiredDialog, setShowExpiredDialog] = useState(false);
+  const [expiredMessage, setExpiredMessage] = useState('');
+  const [expiredDialogTitle, setExpiredDialogTitle] = useState('로그인 기간 만료');
+  const [showExpiryWarning, setShowExpiryWarning] = useState(false);
+  const [expiryWarningMessage, setExpiryWarningMessage] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -45,27 +55,66 @@ const Login: React.FC = () => {
       console.log('서버 응답:', response.data);
       if (response.data.success) {
         localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
         
-        // 로그인 성공 후 사용자 정보 가져오기
-        try {
-          const userResponse = await axios.get('/api/users/me', {
-            headers: {
-              'Authorization': `Bearer ${response.data.token}`
-            }
-          });
-          
-          if (userResponse.data.success) {
-            localStorage.setItem('user', JSON.stringify(userResponse.data.user));
-          }
-        } catch (userError) {
-          console.error('사용자 정보 가져오기 실패:', userError);
+        // 만료 예정 경고가 있는지 확인
+        if (response.data.expiryWarning) {
+          console.log('만료 예정 경고:', response.data.expiryWarning);
+          setExpiryWarningMessage(response.data.expiryWarning.message);
+          setShowExpiryWarning(true);
+        } else {
+          // 만료 예정 경고가 없으면 바로 대시보드로 이동
+          navigate('/dashboard');
         }
-        
-        navigate('/dashboard');
       }
     } catch (error) {
       console.error('Login failed:', error);
-      setError('Login failed. Please check your username and password.');
+      
+      if (axios.isAxiosError(error) && error.response) {
+        console.log('Error response status:', error.response.status);
+        console.log('Error response data:', error.response.data);
+        
+        // 403 에러인 경우 로그인 기간 관련 에러로 처리
+        if (error.response.status === 403) {
+          console.log('403 에러 감지 - 로그인 기간 관련 에러로 처리');
+          
+          const errorData = error.response.data;
+          let message = '';
+          
+          if (errorData.message && errorData.message.includes('만료')) {
+            // 로그인 기간 만료
+            const endDate = errorData.login_period_end || '알 수 없음';
+            const currentDate = errorData.current_date || '오늘';
+            message = `로그인 기간이 만료되었습니다.\n\n로그인 종료일: ${endDate}\n현재 날짜: ${currentDate}\n\n관리자에게 문의하여 로그인 기간을 연장해 주세요.`;
+            setExpiredDialogTitle('로그인 기간 만료');
+          } else if (errorData.message && errorData.message.includes('시작되지')) {
+            // 로그인 기간 미시작
+            const startDate = errorData.login_period_start || '알 수 없음';
+            const currentDate = errorData.current_date || '오늘';
+            message = `로그인 기간이 아직 시작되지 않았습니다.\n\n로그인 시작일: ${startDate}\n현재 날짜: ${currentDate}`;
+            setExpiredDialogTitle('로그인 기간 미시작');
+          } else {
+            // 기타 403 에러
+            message = errorData.message || '접근 권한이 없습니다.';
+            setExpiredDialogTitle('접근 제한');
+          }
+          
+          setExpiredMessage(message);
+          setShowExpiredDialog(true);
+        } else if (error.response.status === 401) {
+          // 401 에러 (잘못된 아이디/비밀번호)
+          setError('Login failed. Please check your username and password.');
+        } else {
+          // 다른 에러의 경우 서버 메시지 사용
+          if (error.response.data && error.response.data.message) {
+            setError(error.response.data.message);
+          } else {
+            setError('Login failed. Please check your username and password.');
+          }
+        }
+      } else {
+        setError('Login failed. Please check your username and password.');
+      }
     } finally {
       setLoading(false);
     }
@@ -226,6 +275,104 @@ const Login: React.FC = () => {
         </Paper>
       </Box>
       <Footer />
+      
+      {/* 로그인 기간 만료 팝업 */}
+      <Dialog
+        open={showExpiredDialog}
+        onClose={() => {
+          setShowExpiredDialog(false);
+          setFormData({ userid: "", password: "" });
+          setError("");
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 1,
+          color: '#d32f2f',
+          fontWeight: 600
+        }}>
+          <WarningIcon sx={{ color: '#d32f2f' }} />
+          {expiredDialogTitle}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ 
+            whiteSpace: 'pre-line',
+            fontSize: '1rem',
+            lineHeight: 1.6
+          }}>
+            {expiredMessage}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button 
+            onClick={() => {
+              setShowExpiredDialog(false);
+              // 폼 초기화
+              setFormData({ userid: "", password: "" });
+              setError("");
+            }}
+            variant="contained"
+            sx={{
+              backgroundColor: '#d32f2f',
+              '&:hover': {
+                backgroundColor: '#b71c1c'
+              }
+            }}
+          >
+            확인
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 만료 예정 안내 팝업 */}
+      <Dialog
+        open={showExpiryWarning}
+        onClose={() => setShowExpiryWarning(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 1,
+          color: '#ed6c02',
+          fontWeight: 600
+        }}>
+          <WarningIcon sx={{ color: '#ed6c02' }} />
+          로그인 기간 만료 예정
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ 
+            whiteSpace: 'pre-line',
+            fontSize: '1rem',
+            lineHeight: 1.6,
+            color: '#333'
+          }}>
+            {expiryWarningMessage}
+            {'\n\n관리자에게 문의하여 로그인 기간을 연장해 주세요.'}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button 
+            onClick={() => {
+              setShowExpiryWarning(false);
+              navigate('/dashboard');
+            }}
+            variant="contained"
+            sx={{
+              backgroundColor: '#ed6c02',
+              '&:hover': {
+                backgroundColor: '#e65100'
+              }
+            }}
+          >
+            확인
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
