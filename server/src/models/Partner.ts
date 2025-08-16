@@ -3,6 +3,7 @@ import sequelize from '../config/database';
 
 class Partner extends Model {
   public partner_id!: number;
+  public company_id!: number;
   public name!: string;
   public partner_type!: 'supplier' | 'customer' | 'both';
   public coi?: string;
@@ -40,6 +41,14 @@ Partner.init(
       type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true,
+    },
+    company_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'company',
+        key: 'company_id',
+      },
     },
     name: {
       type: DataTypes.STRING(100),

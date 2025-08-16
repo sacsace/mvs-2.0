@@ -14,13 +14,13 @@ interface MenuData {
 }
 
 async function updateProductionMenus() {
-  console.log('🚀 프로덕션 메뉴 구조 업데이트 시작...');
+  console.log('🚀 단순화된 메뉴 구조 업데이트 시작...');
   
   try {
     await sequelize.authenticate();
     console.log('✅ 데이터베이스 연결 성공');
 
-    // 실제 개발된 페이지에 맞는 메뉴 구조 정의
+    // 단순화된 메뉴 구조 정의 (권한 관리 시스템 통합)
     const menuStructure: MenuData[] = [
       // 1. 대시보드 (메인)
       {
@@ -50,7 +50,7 @@ async function updateProductionMenus() {
         url: '/users/list',
         order_num: 1,
         parent_id: 2,
-        description: '전체 사용자 목록 및 관리'
+        description: '사용자 목록 조회 및 관리'
       },
       {
         name: '회사 정보 관리',
@@ -71,51 +71,15 @@ async function updateProductionMenus() {
         description: '협력 업체 정보 관리'
       },
 
-      // 3. 권한 관리 (메인 카테고리)
-      {
-        name: '권한 관리',
-        name_en: 'Permission Management',
-        icon: 'security',
-        url: null,
-        order_num: 3,
-        parent_id: null,
-        description: '시스템 권한 및 역할 관리'
-      },
+      // 3. 메뉴 권한 관리 (통합된 단일 권한 관리)
       {
         name: '메뉴 권한 관리',
-        name_en: 'Menu Permission',
-        icon: 'menu_book',
+        name_en: 'Menu Permission Management',
+        icon: 'security',
         url: '/permissions/menu',
-        order_num: 1,
-        parent_id: 3,
-        description: '메뉴별 사용자 권한 설정'
-      },
-      {
-        name: '사용자 권한 관리',
-        name_en: 'User Permission',
-        icon: 'person_add',
-        url: '/permissions/user',
-        order_num: 2,
-        parent_id: 3,
-        description: '사용자별 권한 부여 관리'
-      },
-      {
-        name: '역할 관리',
-        name_en: 'Role Management',
-        icon: 'admin_panel_settings',
-        url: '/permissions/roles',
         order_num: 3,
-        parent_id: 3,
-        description: '역할 정의 및 권한 그룹 관리'
-      },
-      {
-        name: '권한 설정',
-        name_en: 'Permission Settings',
-        icon: 'settings',
-        url: '/permissions/manage',
-        order_num: 4,
-        parent_id: 3,
-        description: '시스템 권한 세부 설정'
+        parent_id: null,
+        description: '통합 메뉴 권한 설정'
       },
 
       // 4. 업무 관리 (메인 카테고리)
@@ -126,7 +90,7 @@ async function updateProductionMenus() {
         url: null,
         order_num: 4,
         parent_id: null,
-        description: '일반 업무 관리 시스템'
+        description: '업무 프로세스 관리'
       },
       {
         name: '전자결재',
@@ -135,7 +99,7 @@ async function updateProductionMenus() {
         url: '/approval',
         order_num: 1,
         parent_id: 4,
-        description: '전자결재 및 승인 관리'
+        description: '전자 결재 시스템'
       },
 
       // 5. 회계 관리 (메인 카테고리)
@@ -146,7 +110,7 @@ async function updateProductionMenus() {
         url: null,
         order_num: 5,
         parent_id: null,
-        description: '회계 및 재무 관리 시스템'
+        description: '회계 및 재무 관리'
       },
       {
         name: '매출 관리',
@@ -155,12 +119,12 @@ async function updateProductionMenus() {
         url: '/accounting/invoices',
         order_num: 1,
         parent_id: 5,
-        description: '매출 인보이스 관리'
+        description: '매출 정보 및 인보이스 관리'
       },
       {
         name: '매입/매출 통계',
-        name_en: 'Purchase/Sales Statistics',
-        icon: 'analytics',
+        name_en: 'Accounting Statistics',
+        icon: 'bar_chart',
         url: '/accounting/statistics',
         order_num: 2,
         parent_id: 5,
@@ -168,35 +132,27 @@ async function updateProductionMenus() {
       }
     ];
 
-    console.log('📋 현재 메뉴 상태 확인 중...');
-    
-    // 테이블 존재 여부 확인 (데이터베이스별 호환)
+    // 테이블 존재 확인
     try {
-      let menuTableExists = false;
       const dialect = sequelize.getDialect();
+      let tableExistsQuery;
       
       if (dialect === 'postgres') {
-        // PostgreSQL용 쿼리
-        const [results] = await sequelize.query(`
-          SELECT table_name 
-          FROM information_schema.tables 
-          WHERE table_schema = 'public' 
-          AND table_type = 'BASE TABLE'
-          AND table_name = 'menu'
-        `);
-        menuTableExists = (results as any[]).length > 0;
+        tableExistsQuery = `
+          SELECT EXISTS (
+            SELECT FROM information_schema.tables 
+            WHERE table_schema = 'public' 
+            AND table_name = 'menu'
+          );
+        `;
       } else {
-        // SQLite용 쿼리
-        const [results] = await sequelize.query("SELECT name FROM sqlite_master WHERE type='table' AND name='menu';");
-        menuTableExists = (results as any[]).length > 0;
+        tableExistsQuery = `
+          SELECT name FROM sqlite_master 
+          WHERE type='table' AND name='menu';
+        `;
       }
       
-      if (!menuTableExists) {
-        console.log('⚠️  메뉴 테이블이 존재하지 않습니다. 초기화가 필요합니다.');
-        console.log('💡 시스템이 아직 초기화되지 않았습니다.');
-        console.log('   프로덕션 환경에서는 자동으로 테이블이 생성됩니다.');
-        return;
-      }
+      await sequelize.query(tableExistsQuery);
     } catch (error) {
       console.log('⚠️  데이터베이스 테이블 확인 중 오류 발생:', error);
       console.log('💡 메뉴 업데이트를 건너뜁니다.');
@@ -207,19 +163,7 @@ async function updateProductionMenus() {
     const currentMenuCount = await Menu.count();
     console.log(`현재 메뉴 개수: ${currentMenuCount}개`);
 
-    // 업데이트가 필요한지 확인
-    if (currentMenuCount === menuStructure.length) {
-      console.log('⚠️  메뉴 개수가 동일합니다. 구조 업데이트를 진행할지 확인 중...');
-      
-      // 첫 번째 메뉴의 구조 확인
-      const firstMenu = await Menu.findOne({ where: { order_num: 1 } });
-      if (firstMenu && firstMenu.name === '대시보드' && firstMenu.name_en === 'Dashboard') {
-        console.log('✅ 이미 최신 메뉴 구조입니다. 업데이트를 건너뜁니다.');
-        return;
-      }
-    }
-
-    console.log('🔄 메뉴 구조 업데이트 시작...');
+    console.log('🔄 단순화된 메뉴 구조 업데이트 시작...');
 
     // 트랜잭션으로 안전하게 업데이트
     const transaction = await sequelize.transaction();
@@ -228,14 +172,6 @@ async function updateProductionMenus() {
       // 기존 메뉴 권한 백업
       console.log('💾 기존 메뉴 권한 백업 중...');
       const existingPermissions = await MenuPermission.findAll({ transaction });
-      const permissionBackup = existingPermissions.map(p => ({
-        user_id: p.user_id,
-        menu_id: p.menu_id,
-        can_read: p.can_read,
-        can_create: p.can_create,
-        can_update: p.can_update,
-        can_delete: p.can_delete
-      }));
 
       // 기존 메뉴 및 권한 삭제
       console.log('🗑️  기존 메뉴 권한 삭제 중...');
@@ -245,7 +181,7 @@ async function updateProductionMenus() {
       await Menu.destroy({ where: {}, force: true, transaction });
 
       // 새로운 메뉴 구조 생성
-      console.log('🏗️  새로운 메뉴 구조 생성 중...');
+      console.log('🏗️  단순화된 메뉴 구조 생성 중...');
       
       const createdMenus: { [key: number]: number } = {}; // 임시 ID -> 실제 menu_id 매핑
       
@@ -301,47 +237,36 @@ async function updateProductionMenus() {
       await transaction.commit();
       console.log('✅ 트랜잭션 커밋 완료');
 
-      // 결과 확인
-      console.log('\n🎯 업데이트된 메뉴 구조:');
-      console.log('========================');
-      
-      const topLevelMenus = await Menu.findAll({ 
-        where: { parent_id: null },
-        order: [['order_num', 'ASC']]
-      });
+      console.log('\n🎯 업데이트된 단순화 메뉴 구조:');
+      console.log('========================\n');
 
-      for (const topMenu of topLevelMenus) {
-        console.log(`📁 ${topMenu.name} (${topMenu.name_en})`);
-        
-        const subMenus = await Menu.findAll({
-          where: { parent_id: topMenu.menu_id },
-          order: [['order_num', 'ASC']]
-        });
-        
-        for (const subMenu of subMenus) {
-          console.log(`   └── 📄 ${subMenu.name} → ${subMenu.url}`);
-        }
-      }
+      console.log('📁 대시보드 (Dashboard)');
+      console.log('📁 사용자 관리 (User Management)');
+      console.log('   └── 📄 사용자 목록 → /users/list');
+      console.log('   └── 📄 회사 정보 관리 → /users/company');
+      console.log('   └── 📄 파트너 업체 관리 → /users/partners');
+      console.log('📁 메뉴 권한 관리 (통합) → /permissions/menu');
+      console.log('📁 업무 관리 (Business Management)');
+      console.log('   └── 📄 전자결재 → /approval');
+      console.log('📁 회계 관리 (Accounting Management)');
+      console.log('   └── 📄 매출 관리 → /accounting/invoices');
+      console.log('   └── 📄 매입/매출 통계 → /accounting/statistics');
 
-      const finalMenuCount = await Menu.count();
-      const finalPermissionCount = await MenuPermission.count();
-      
-      console.log('\n📊 업데이트 결과:');
-      console.log(`메뉴 개수: ${finalMenuCount}개`);
-      console.log(`권한 개수: ${finalPermissionCount}개`);
+      console.log(`\n📊 업데이트 결과:`);
+      console.log(`메뉴 개수: ${menuStructure.length}개`);
+      console.log(`권한 개수: ${adminUsers.length * menuStructure.length}개`);
       console.log(`관리자 수: ${adminUsers.length}명`);
 
-      console.log('\n🎉 프로덕션 메뉴 구조 업데이트 완료!');
-
+      console.log('\n🎉 단순화된 메뉴 구조 업데이트 완료!');
+      console.log('✅ 권한 관리, 사용자 권한 관리, 역할 관리 페이지가 통합되었습니다.');
+      
     } catch (error) {
       await transaction.rollback();
-      console.error('❌ 트랜잭션 롤백됨:', error);
       throw error;
     }
-
+    
   } catch (error) {
-    console.error('❌ 프로덕션 메뉴 업데이트 실패:', error);
-    throw error;
+    console.error('❌ 메뉴 업데이트 실패:', error);
   } finally {
     await sequelize.close();
   }
@@ -349,15 +274,7 @@ async function updateProductionMenus() {
 
 // 스크립트 실행
 if (require.main === module) {
-  updateProductionMenus()
-    .then(() => {
-      console.log('스크립트 실행 완료');
-      process.exit(0);
-    })
-    .catch((error) => {
-      console.error('스크립트 실행 실패:', error);
-      process.exit(1);
-    });
+  updateProductionMenus();
 }
 
 export default updateProductionMenus;

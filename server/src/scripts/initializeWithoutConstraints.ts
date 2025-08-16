@@ -159,10 +159,7 @@ async function initializeSystemData() {
         { id: 23, name: '협력 업체 관리', name_en: 'Partner Management', icon: 'groups', order: 3, parent_id: 2, url: '/users/partners' },
 
         // 권한 관리 하위 메뉴
-        { id: 31, name: '메뉴 권한 관리', name_en: 'Menu Permission Management', icon: 'menu_book', order: 1, parent_id: 3, url: '/permissions/menu' },
-        { id: 32, name: '권한 관리', name_en: 'Permission Management', icon: 'admin_panel_settings', order: 2, parent_id: 3, url: '/permissions/manage' },
-        { id: 33, name: '사용자 권한 관리', name_en: 'User Permission Management', icon: 'person_add', order: 3, parent_id: 3, url: '/permissions/user' },
-        { id: 34, name: '역할 관리', name_en: 'Role Management', icon: 'supervisor_account', order: 4, parent_id: 3, url: '/permissions/roles' },
+        { id: 31, name: '메뉴 권한 관리', name_en: 'Menu Permission Management', icon: 'security', order: 1, parent_id: null, url: '/permissions/menu' },
 
         // 회계 관리 하위 메뉴
         { id: 41, name: '매입/매출 통계', name_en: 'Purchase/Sales Statistics', icon: 'bar_chart', order: 1, parent_id: 4, url: '/accounting/statistics' },

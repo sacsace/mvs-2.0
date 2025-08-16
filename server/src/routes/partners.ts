@@ -5,17 +5,35 @@ import logger from '../utils/logger';
 
 const router = express.Router();
 
-// 파트너사 목록 조회
+// 파트너사 목록 조회 (내 회사 관련만)
 router.get('/', authenticateJWT, async (req: Request, res: Response) => {
   try {
-    // 삭제되지 않은 활성 파트너만 조회
-    const partners = await Partner.findAll({
-      where: { 
+    const userCompanyId = req.user?.company_id;
+    const userRole = req.user?.role;
+
+    if (!userCompanyId) {
+      return res.status(400).json({ error: '회사 정보가 없습니다.' });
+    }
+
+    // 내 회사와 관련된 파트너사만 조회
+    let whereClause: any = { 
+      company_id: userCompanyId,
+      is_deleted: false 
+    };
+
+    // root와 audit는 모든 파트너사를 볼 수 있음
+    if (userRole === 'root' || userRole === 'audit') {
+      whereClause = { 
         is_deleted: false 
-      },
+      };
+    }
+
+    const partners = await Partner.findAll({
+      where: whereClause,
       order: [['name', 'ASC']]
     });
 
+    logger.info(`User company ${userCompanyId} - Found ${partners.length} partners`);
     res.json(partners);
   } catch (error) {
     logger.error('Error fetching partners:', error);
@@ -49,6 +67,12 @@ router.get('/:id', authenticateJWT, async (req: Request, res: Response) => {
 // 파트너사 추가
 router.post('/', authenticateJWT, async (req: Request, res: Response) => {
   try {
+    const userCompanyId = req.user?.company_id;
+
+    if (!userCompanyId) {
+      return res.status(400).json({ error: '회사 정보가 없습니다.' });
+    }
+
     const {
       name,
       partner_type,
@@ -83,6 +107,7 @@ router.post('/', authenticateJWT, async (req: Request, res: Response) => {
     }
 
     const newPartner = await Partner.create({
+      company_id: userCompanyId, // 로그인한 사용자의 회사 ID 자동 설정
       name,
       partner_type,
       coi,
@@ -112,7 +137,7 @@ router.post('/', authenticateJWT, async (req: Request, res: Response) => {
       is_deleted: false
     });
 
-    logger.info(`New partner created: ${newPartner.name}`);
+    logger.info(`New partner created for company ${userCompanyId}: ${newPartner.name}`);
     res.status(201).json(newPartner);
   } catch (error) {
     logger.error('Error creating partner:', error);
@@ -124,30 +149,44 @@ router.post('/', authenticateJWT, async (req: Request, res: Response) => {
 router.put('/:id', authenticateJWT, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const userCompanyId = req.user?.company_id;
+    const userRole = req.user?.role;
     const updateData = req.body;
 
-    // partner_id는 수정 불가
+    if (!userCompanyId) {
+      return res.status(400).json({ error: '회사 정보가 없습니다.' });
+    }
+
+    // partner_id와 company_id는 수정 불가
     delete updateData.partner_id;
+    delete updateData.company_id;
     delete updateData.create_date;
 
     // update_date 설정
     updateData.update_date = new Date();
 
+    // 수정 권한 확인 (자기 회사 파트너만 수정 가능, root/audit는 예외)
+    let whereClause: any = {
+      partner_id: id,
+      is_deleted: false
+    };
+
+    if (userRole !== 'root' && userRole !== 'audit') {
+      whereClause.company_id = userCompanyId;
+    }
+
     const [updatedRowsCount] = await Partner.update(updateData, {
-      where: {
-        partner_id: id,
-        is_deleted: false
-      }
+      where: whereClause
     });
 
     if (updatedRowsCount === 0) {
-      return res.status(404).json({ error: '파트너사를 찾을 수 없습니다.' });
+      return res.status(404).json({ error: '파트너사를 찾을 수 없거나 수정 권한이 없습니다.' });
     }
 
     // 수정된 파트너사 정보 반환
     const updatedPartner = await Partner.findByPk(id);
     
-    logger.info(`Partner updated: ${updatedPartner?.name}`);
+    logger.info(`Partner updated by company ${userCompanyId}: ${updatedPartner?.name}`);
     res.json(updatedPartner);
   } catch (error) {
     logger.error('Error updating partner:', error);
@@ -159,6 +198,22 @@ router.put('/:id', authenticateJWT, async (req: Request, res: Response) => {
 router.delete('/:id', authenticateJWT, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const userCompanyId = req.user?.company_id;
+    const userRole = req.user?.role;
+
+    if (!userCompanyId) {
+      return res.status(400).json({ error: '회사 정보가 없습니다.' });
+    }
+
+    // 삭제 권한 확인 (자기 회사 파트너만 삭제 가능, root/audit는 예외)
+    let whereClause: any = {
+      partner_id: id,
+      is_deleted: false
+    };
+
+    if (userRole !== 'root' && userRole !== 'audit') {
+      whereClause.company_id = userCompanyId;
+    }
 
     const [updatedRowsCount] = await Partner.update(
       { 
@@ -167,18 +222,15 @@ router.delete('/:id', authenticateJWT, async (req: Request, res: Response) => {
         update_date: new Date()
       },
       {
-        where: {
-          partner_id: id,
-          is_deleted: false
-        }
+        where: whereClause
       }
     );
 
     if (updatedRowsCount === 0) {
-      return res.status(404).json({ error: '파트너사를 찾을 수 없습니다.' });
+      return res.status(404).json({ error: '파트너사를 찾을 수 없거나 삭제 권한이 없습니다.' });
     }
 
-    logger.info(`Partner soft deleted: ID ${id}`);
+    logger.info(`Partner soft deleted by company ${userCompanyId}: ID ${id}`);
     res.json({ message: '파트너사가 삭제되었습니다.' });
   } catch (error) {
     logger.error('Error deleting partner:', error);

@@ -55,6 +55,7 @@ const formatAccountNumber = (value: string): string => {
 
 interface Partner {
   partner_id: number;
+  company_id: number;
   name: string;
   partner_type: 'supplier' | 'customer' | 'both';
   coi?: string;
@@ -169,7 +170,7 @@ const PartnerPage: React.FC = () => {
       const searchLower = searchValue.toLowerCase();
       return (
         partner.name.toLowerCase().includes(searchLower) ||
-        partner.coi.toLowerCase().includes(searchLower) ||
+        (partner.coi && partner.coi.toLowerCase().includes(searchLower)) ||
         (partner.address && partner.address.toLowerCase().includes(searchLower)) ||
         (partner.pan && partner.pan.toLowerCase().includes(searchLower)) ||
         (partner.gst1 && partner.gst1.toLowerCase().includes(searchLower)) ||
@@ -242,8 +243,8 @@ const PartnerPage: React.FC = () => {
   const handleEditPartner = (partner: Partner) => {
     setFormData({
       name: partner.name,
-      coi: partner.coi,
-      address: partner.address,
+      coi: partner.coi || '',
+      address: partner.address || '',
       pan: partner.pan || '',
       gst1: partner.gst1 || '',
       gst2: partner.gst2 || '',

@@ -17,6 +17,10 @@ import Invoice from './Invoice';
 User.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
 Company.hasMany(User, { foreignKey: 'company_id', as: 'users' });
 
+// Partner - Company 관계
+Partner.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
+Company.hasMany(Partner, { foreignKey: 'company_id', as: 'partners' });
+
 // User - MenuPermission 관계
 User.hasMany(MenuPermission, { foreignKey: 'user_id', as: 'menuPermissions' });
 MenuPermission.belongsTo(User, { foreignKey: 'user_id', as: 'user' });

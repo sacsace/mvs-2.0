@@ -19,7 +19,7 @@
     "update-menus": "ts-node src/scripts/updateProductionMenus.ts",
     "init-system": "ts-node src/scripts/initializeWithoutConstraints.ts",
     "init-if-empty": "ts-node src/scripts/initializeIfEmpty.ts",
-    "postbuild": "npm run update-menus || echo 'Menu update skipped - database not initialized'"
+    "postbuild": "echo 'Build completed - Menu update disabled'"
   },
   "dependencies": {
     "@types/jest": "^29.5.14",
