@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "cd server && node --max-old-space-size=256 --expose-gc dist/index.js",
+    "start": "cd server && node --max-old-space-size=512 --expose-gc dist/index.js",
     "build": "npm run build:server && npm run build:client",
     "build:server": "cd server && npm install --legacy-peer-deps --force && npm run build",
     "build:client": "cd client && npm install --legacy-peer-deps --force && npm run build",

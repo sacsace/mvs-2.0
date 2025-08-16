@@ -87,15 +87,23 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 const PORT = parseInt(process.env.PORT || config.server.port.toString() || '3001');
 
+// Railway 환경 디버깅
+logger.info(`🔧 Railway Environment Debug:`);
+logger.info(`  - PORT: ${PORT}`);
+logger.info(`  - NODE_ENV: ${process.env.NODE_ENV}`);
+logger.info(`  - DATABASE_URL exists: ${!!process.env.DATABASE_URL}`);
+logger.info(`  - Memory limit: ${process.env.NODE_OPTIONS || 'default'}`);
+
 // 서버 시작 전 로그
 logger.info(`Starting server on port ${PORT}`);
 logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
 logger.info(`Database URL exists: ${!!process.env.DATABASE_URL}`);
 
-// 서버 시작 및 데이터베이스 동기화
-app.listen(PORT, '0.0.0.0', async () => {
+// Railway 헬스체크 대응
+const server = app.listen(PORT, '0.0.0.0', async () => {
   logger.info(`✅ Server is running on port ${PORT}`);
   logger.info(`✅ Health check available at: http://localhost:${PORT}/api/init/health`);
+  logger.info(`🚀 Railway deployment successful at ${new Date().toISOString()}`);
   
   try {
     // 데이터베이스 연결 확인
