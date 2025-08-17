@@ -54,18 +54,15 @@ export const getUserPermissions = async (userId: number): Promise<UserPermission
       type: QueryTypes.SELECT
     }) as any[];
 
-    // 3. 역할별 기본 권한 가져오기
-    const rolePermissions = getDefaultPermissionsByRole(user.role);
-
-    // 4. 메뉴별 최종 권한 계산
-    const finalMenuPermissions: Record<string, RolePermissions> = {};
-
-    // 모든 메뉴 조회
+    // 3. 모든 메뉴 조회
     const allMenus = await sequelize.query(`
       SELECT menu_id, name, url FROM menu ORDER BY order_num
     `, {
       type: QueryTypes.SELECT
     }) as any[];
+
+    // 4. 메뉴별 최종 권한 계산
+    const finalMenuPermissions: Record<string, RolePermissions> = {};
 
     // 각 메뉴에 대해 최종 권한 계산
     for (const menu of allMenus) {
@@ -73,7 +70,8 @@ export const getUserPermissions = async (userId: number): Promise<UserPermission
       
       if (menuPermission) {
         // 메뉴별 권한이 있는 경우: 역할 권한 + 메뉴 권한 병합
-        finalMenuPermissions[menu.name] = mergePermissions(rolePermissions, {
+        const menuRolePermissions = getDefaultPermissionsByRole(user.role, menu.name);
+        finalMenuPermissions[menu.name] = mergePermissions(menuRolePermissions, {
           can_read: menuPermission.can_read,
           can_create: menuPermission.can_create,
           can_update: menuPermission.can_update,
@@ -83,15 +81,11 @@ export const getUserPermissions = async (userId: number): Promise<UserPermission
         // 메뉴별 권한이 없는 경우
         if (user.role === 'root') {
           // root 사용자는 항상 모든 권한
-          finalMenuPermissions[menu.name] = rolePermissions;
+          const rootPermissions = getDefaultPermissionsByRole(user.role);
+          finalMenuPermissions[menu.name] = rootPermissions;
         } else {
-          // 일반 사용자는 권한 없음 (관리자가 명시적으로 부여할 때까지)
-          finalMenuPermissions[menu.name] = {
-            can_read: false,
-            can_create: false,
-            can_update: false,
-            can_delete: false
-          };
+          // 일반 사용자는 메뉴별 기본 권한 적용
+          finalMenuPermissions[menu.name] = getDefaultPermissionsByRole(user.role, menu.name);
         }
       }
     }
