@@ -1,17 +1,23 @@
 {
   "development": {
-    "dialect": "sqlite",
-    "storage": "./database.sqlite",
+    "use_env_variable": "DATABASE_URL",
+    "dialect": "postgres",
+    "dialectOptions": {
+      "ssl": false
+    },
     "define": {
-      "timestamps": false,
+      "timestamps": true,
       "underscored": true
     }
   },
   "test": {
-    "dialect": "sqlite",
-    "storage": ":memory:",
+    "use_env_variable": "DATABASE_URL",
+    "dialect": "postgres",
+    "dialectOptions": {
+      "ssl": false
+    },
     "define": {
-      "timestamps": false,
+      "timestamps": true,
       "underscored": true
     }
   },
