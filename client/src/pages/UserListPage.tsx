@@ -215,9 +215,28 @@ const UserListPage: React.FC = () => {
     
     // 역할이 root나 audit이 아닌 경우 현재 사용자의 회사로 자동 설정
     // 그렇지 않으면 첫 번째 회사를 기본값으로 설정
-    const defaultCompanyId = (defaultRole !== 'root' && defaultRole !== 'audit') 
+    let defaultCompanyId = (defaultRole !== 'root' && defaultRole !== 'audit') 
       ? (currentUser?.company_id || 1) 
       : (companies.length > 0 ? companies[0].company_id : 1);
+    
+    // 선택된 회사에서 기본 역할이 사용 가능한지 확인하고 필요시 조정
+    const availableRoles = getAvailableRolesForCompany(defaultCompanyId, currentUser?.role || 'user');
+    if (!availableRoles.includes(defaultRole)) {
+      // 기본 역할이 해당 회사에서 사용할 수 없는 경우
+      if (defaultRole === 'audit') {
+        // audit 역할이 불가능한 경우 Minsub Ventures Private Limited 회사 찾기
+        const minsubCompany = companies.find(c => c.name === 'Minsub Ventures Private Limited');
+        if (minsubCompany) {
+          defaultCompanyId = minsubCompany.company_id;
+        } else {
+          // Minsub 회사가 없으면 사용 가능한 첫 번째 역할로 변경
+          defaultRole = availableRoles.length > 0 ? availableRoles[0] : 'user';
+        }
+      } else {
+        // 기타 역할의 경우 사용 가능한 첫 번째 역할로 변경
+        defaultRole = availableRoles.length > 0 ? availableRoles[0] : 'user';
+      }
+    }
     
     console.log('기본 역할:', defaultRole);
     console.log('기본 회사 ID:', defaultCompanyId);
@@ -247,6 +266,13 @@ const UserListPage: React.FC = () => {
     
     // 사용자 수정 시에는 원래 사용자의 회사를 기본값으로 설정
     const defaultCompanyId = user.company_id;
+    
+    // 선택된 회사에서 현재 역할이 사용 가능한지 확인하고 필요시 변경
+    const availableRoles = getAvailableRolesForCompany(defaultCompanyId, currentUser?.role || 'user');
+    if (!availableRoles.includes(editableRole)) {
+      // 현재 역할이 해당 회사에서 사용할 수 없는 경우 사용 가능한 첫 번째 역할로 변경
+      editableRole = availableRoles.length > 0 ? availableRoles[0] : 'user';
+    }
     
     setFormData({
       userid: user.userid,
@@ -288,6 +314,36 @@ const UserListPage: React.FC = () => {
 
   const hasUserPassword = (user: User) => {
     return userPasswordStatus[user.id] ?? true; // 기본값은 true
+  };
+
+  // Minsub Ventures Private Limited 회사인지 확인하는 함수
+  const isMinsub = (companyId: number): boolean => {
+    const company = companies.find(c => c.company_id === companyId);
+    return company?.name === 'Minsub Ventures Private Limited';
+  };
+
+  // 현재 선택된 회사에서 사용 가능한 역할 목록을 반환하는 함수
+  const getAvailableRolesForCompany = (companyId: number, currentUserRole: string): string[] => {
+    const isMinsubCompany = isMinsub(companyId);
+    let availableRoles: string[] = [];
+
+    // 현재 사용자 권한에 따른 기본 역할 목록
+    if (currentUserRole === 'root') {
+      availableRoles = ['root', 'audit', 'admin', 'user'];
+    } else if (currentUserRole === 'audit') {
+      availableRoles = ['audit', 'admin', 'user'];
+    } else if (currentUserRole === 'admin') {
+      availableRoles = ['admin', 'user'];
+    } else {
+      availableRoles = ['user'];
+    }
+
+    // Minsub Ventures Private Limited가 아닌 회사에서는 audit 역할 제외
+    if (!isMinsubCompany) {
+      availableRoles = availableRoles.filter(role => role !== 'audit');
+    }
+
+    return availableRoles;
   };
 
   const handleDeleteUser = (user: User) => {
@@ -815,6 +871,14 @@ const UserListPage: React.FC = () => {
                         : formData.company_id;
                     }
                     
+                    // audit 역할로 변경하는 경우 Minsub Ventures Private Limited 회사로 자동 설정
+                    if (newRole === 'audit' && !isMinsub(newCompanyId)) {
+                      const minsubCompany = companies.find(c => c.name === 'Minsub Ventures Private Limited');
+                      if (minsubCompany) {
+                        newCompanyId = minsubCompany.company_id;
+                      }
+                    }
+                    
                     console.log('새 회사 ID:', newCompanyId);
                     console.log('편집 모드:', editingUser ? '수정' : '추가');
                     
@@ -847,6 +911,7 @@ const UserListPage: React.FC = () => {
                   console.log('=== 역할 선택 옵션 렌더링 ===');
                   console.log('현재 사용자:', currentUser);
                   console.log('현재 사용자 역할:', currentUser?.role);
+                  console.log('선택된 회사 ID:', formData.company_id);
                   console.log('editingUser:', editingUser ? '수정 모드' : '추가 모드');
                   
                   // currentUser가 없는 경우 기본 옵션만 표시
@@ -858,26 +923,39 @@ const UserListPage: React.FC = () => {
                       </>
                     );
                   }
-                  
-                  // 사용자 추가/수정에 따른 역할 옵션 제한
-                  // 사용자 추가 시: System Administrator 역할 제외
-                  // 사용자 수정 시: 기존 로직 유지
-                  
-                  // 임시: 간단한 메뉴 아이템으로 테스트
-                  console.log('간단한 메뉴 아이템 렌더링');
-                  // 권한 기반 역할 옵션 렌더링
+
+                  // 현재 선택된 회사에서 사용 가능한 역할 목록 가져오기
+                  const availableRoles = getAvailableRolesForCompany(formData.company_id, currentUser.role);
                   const roleOptions = [];
-                  if (currentUser?.role === 'root') {
-                    roleOptions.push(
-                      <MenuItem key="admin" value="admin" sx={{ fontSize: '0.75rem' }}>Administrator</MenuItem>,
-                      <MenuItem key="audit" value="audit" sx={{ fontSize: '0.75rem' }}>Auditor</MenuItem>,
-                      <MenuItem key="user" value="user" sx={{ fontSize: '0.75rem' }}>User</MenuItem>
-                    );
-                  } else if (currentUser?.role === 'admin' || currentUser?.role === 'audit') {
-                    roleOptions.push(
-                      <MenuItem key="user" value="user" sx={{ fontSize: '0.75rem' }}>User</MenuItem>
-                    );
-                  }
+                  
+                  console.log('사용 가능한 역할:', availableRoles);
+                  
+                  // 사용 가능한 역할에 따라 옵션 추가
+                  availableRoles.forEach(role => {
+                    switch (role) {
+                      case 'root':
+                        roleOptions.push(
+                          <MenuItem key="root" value="root" sx={{ fontSize: '0.75rem' }}>System Administrator</MenuItem>
+                        );
+                        break;
+                      case 'audit':
+                        roleOptions.push(
+                          <MenuItem key="audit" value="audit" sx={{ fontSize: '0.75rem' }}>Auditor</MenuItem>
+                        );
+                        break;
+                      case 'admin':
+                        roleOptions.push(
+                          <MenuItem key="admin" value="admin" sx={{ fontSize: '0.75rem' }}>Administrator</MenuItem>
+                        );
+                        break;
+                      case 'user':
+                        roleOptions.push(
+                          <MenuItem key="user" value="user" sx={{ fontSize: '0.75rem' }}>User</MenuItem>
+                        );
+                        break;
+                    }
+                  });
+                  
                   return roleOptions;
                 })()}
                 {/* root는 자신과 같은 역할도 추가 가능하므로 별도 처리하지 않음 */}
@@ -889,7 +967,21 @@ const UserListPage: React.FC = () => {
               <Select
                 value={formData.company_id.toString()}
                 label={t('company')}
-                onChange={(e) => setFormData({ ...formData, company_id: parseInt(e.target.value) })}
+                onChange={(e) => {
+                  const newCompanyId = parseInt(e.target.value);
+                  const newFormData = { ...formData, company_id: newCompanyId };
+                  
+                  // Minsub Ventures Private Limited가 아닌 회사로 변경하고 현재 역할이 audit인 경우 역할 변경
+                  if (!isMinsub(newCompanyId) && formData.role === 'audit') {
+                    const availableRoles = getAvailableRolesForCompany(newCompanyId, currentUser?.role || 'user');
+                    // 사용 가능한 역할 중 첫 번째로 자동 설정 (일반적으로 가장 높은 권한)
+                    if (availableRoles.length > 0) {
+                      newFormData.role = availableRoles[0];
+                    }
+                  }
+                  
+                  setFormData(newFormData);
+                }}
                 disabled={
                   editingUser 
                     ? (currentUser?.role === 'admin' && formData.role !== 'root' && formData.role !== 'audit') // 수정 시: admin 사용자는 root/audit 역할이 아닌 경우에만 회사 변경 불가
@@ -925,6 +1017,13 @@ const UserListPage: React.FC = () => {
                     ? 'Administrator 권한으로는 System Administrator와 Auditor 역할의 회사만 변경할 수 있습니다.'
                     : 'System Administrator와 Auditor 역할만 회사를 선택할 수 있습니다.'
                   }
+                </Typography>
+              )}
+              
+              {/* Auditor 역할 제한 안내 */}
+              {!isMinsub(formData.company_id) && (
+                <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#ff9800', mt: 0.5, display: 'block' }}>
+                  ⚠️ 선택된 회사에서는 Auditor 역할을 선택할 수 없습니다. Auditor 역할은 "Minsub Ventures Private Limited"에서만 가능합니다.
                 </Typography>
               )}
             </FormControl>
