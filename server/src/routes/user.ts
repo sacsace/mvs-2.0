@@ -74,18 +74,23 @@ router.get('/', authMiddleware, async (req: Request & { user?: any }, res: Respo
     } else {
       // 다른 사용자들은 메뉴 권한 체크
       const { QueryTypes } = require('sequelize');
+      // 사용자 관련 메뉴들 체크 ('사용자 목록', '사용자 관리', 'User List' 등)
       const menuPermission = await User.sequelize?.query(
         `SELECT mp.can_read FROM menu_permission mp 
          JOIN menu m ON mp.menu_id = m.menu_id 
-         WHERE mp.user_id = ? AND m.name = '사용자 관리' AND mp.can_read = 1`,
+         WHERE mp.user_id = ? AND (m.name IN ('사용자 목록', '사용자 관리', 'User List', 'User Management') OR m.url LIKE '%users%') 
+         AND mp.can_read = true`,
         { 
           replacements: [currentUser.id], 
           type: QueryTypes.SELECT 
         }
       );
 
+      logger.info(`Checking menu permission for user ${currentUser.userid} on user-related menus`);
+      logger.info(`Menu permission result:`, menuPermission);
+
       if (!menuPermission || (menuPermission as any[]).length === 0) {
-        logger.info(`User ${currentUser.userid} does not have permission to view user management`);
+        logger.info(`User ${currentUser.userid} does not have permission to view user list`);
         return res.status(403).json({ error: '사용자 목록을 조회할 권한이 없습니다.' });
       }
 
