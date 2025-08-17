@@ -1020,12 +1020,7 @@ const UserListPage: React.FC = () => {
                 </Typography>
               )}
               
-              {/* Auditor 역할 제한 안내 */}
-              {!isMinsub(formData.company_id) && (
-                <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#ff9800', mt: 0.5, display: 'block' }}>
-                  ⚠️ 선택된 회사에서는 Auditor 역할을 선택할 수 없습니다. Auditor 역할은 "Minsub Ventures Private Limited"에서만 가능합니다.
-                </Typography>
-              )}
+
             </FormControl>
 
             <FormControl fullWidth>

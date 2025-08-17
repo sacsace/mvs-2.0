@@ -638,7 +638,7 @@ const InvoicePage: React.FC = () => {
     <title>${getInvoiceTitle(invoice.invoice_type)} - ${invoice.invoice_number}</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: sans-serif;
             margin: 0;
             padding: 20px;
             background-color: white;
@@ -1136,7 +1136,7 @@ const InvoicePage: React.FC = () => {
             }
             
             body { 
-              font-family: Arial, sans-serif; 
+              font-family: sans-serif; 
               margin: 0;
               padding: 0;
               font-size: 11px;
@@ -1470,7 +1470,7 @@ const InvoicePage: React.FC = () => {
             }
             
             body { 
-              font-family: Arial, sans-serif; 
+              font-family: sans-serif; 
               margin: 0;
               padding: 0;
               font-size: 11px;

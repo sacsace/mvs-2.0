@@ -576,10 +576,10 @@ const Sidebar: React.FC = () => {
         p: 1.5,
         pt: 10,
         minHeight: 0,
-        fontFamily: `'Pretendard', 'Noto Sans KR', 'Roboto', 'Apple SD Gothic Neo', 'sans-serif'`,
+        fontFamily: 'sans-serif',
       }}
     >
-      <List sx={{ pt: 0, fontFamily: `'Pretendard', 'Noto Sans KR', 'Roboto', 'Apple SD Gothic Neo', 'sans-serif'` }}>
+      <List sx={{ pt: 0, fontFamily: 'sans-serif' }}>
         {menus.length > 0 ? (
           menus.map((menu, idx) => (
             <React.Fragment key={menu.menu_id}>
@@ -594,7 +594,7 @@ const Sidebar: React.FC = () => {
               color="text.secondary"
               sx={{ 
                 fontSize: '0.875rem',
-                fontFamily: `'Pretendard', 'Noto Sans KR', 'Roboto', 'Apple SD Gothic Neo', 'sans-serif'`
+                fontFamily: 'sans-serif'
               }}
             >
               메뉴 권한이 없습니다.
@@ -604,7 +604,7 @@ const Sidebar: React.FC = () => {
               color="text.secondary"
               sx={{ 
                 fontSize: '0.75rem',
-                fontFamily: `'Pretendard', 'Noto Sans KR', 'Roboto', 'Apple SD Gothic Neo', 'sans-serif'`,
+                fontFamily: 'sans-serif',
                 mt: 1,
                 display: 'block'
               }}

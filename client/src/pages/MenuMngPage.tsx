@@ -156,7 +156,7 @@ const MenuMngPage: React.FC = () => {
             '&:hover': { background: '#f0f6ff' },
             boxShadow: level === 0 ? '0 2px 8px rgba(25, 118, 210, 0.04)' : 'none',
             borderLeft: level === 0 ? '4px solid #1976d2' : '4px solid transparent',
-            fontFamily: `'Pretendard', 'Noto Sans KR', 'Roboto', 'Apple SD Gothic Neo', 'sans-serif'`,
+            fontFamily: 'sans-serif',
           }}
         >
           <TableCell sx={{ pl: 1 + level * 9, py: 0.7, border: 0, fontSize: level === 0 ? '0.8rem' : '0.75rem', fontWeight: level === 0 ? 600 : 400, color: level === 0 ? '#222' : '#4b5b6b', background: 'none', borderRadius: level === 0 ? '8px 0 0 8px' : 0 }}>
