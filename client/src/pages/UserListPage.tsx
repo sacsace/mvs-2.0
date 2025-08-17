@@ -21,6 +21,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  DialogContentText,
   FormControl,
   InputLabel,
   Select,
@@ -44,7 +45,8 @@ import {
   Business as BusinessIcon,
   Language as LanguageIcon,
   CalendarToday as CalendarIcon,
-  Update as UpdateIcon
+  Update as UpdateIcon,
+  Warning as WarningIcon
 } from '@mui/icons-material';
 import { useLanguage } from '../contexts/LanguageContext';
 import { filterUsersByPermission, useMenuPermission } from '../hooks/useMenuPermission';
@@ -86,6 +88,8 @@ const UserListPage: React.FC = () => {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [viewingUser, setViewingUser] = useState<User | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [formData, setFormData] = useState({
     userid: '',
     username: '',
@@ -286,26 +290,36 @@ const UserListPage: React.FC = () => {
     return userPasswordStatus[user.id] ?? true; // 기본값은 true
   };
 
-  const handleDeleteUser = async (userId: number) => {
-    if (window.confirm('정말로 이 사용자를 삭제하시겠습니까?')) {
-      try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`/api/users/${userId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
+  const handleDeleteUser = (user: User) => {
+    setUserToDelete(user);
+    setDeleteDialogOpen(true);
+  };
 
-        if (response.ok) {
-          fetchUsers();
-        } else {
-          setError('사용자 삭제에 실패했습니다.');
-        }
-      } catch (error) {
-        console.error('사용자 삭제 오류:', error);
+  const handleConfirmDelete = async () => {
+    if (!userToDelete) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/users/${userToDelete.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        fetchUsers();
+        setSnackbarMessage('사용자가 성공적으로 삭제되었습니다.');
+        setSnackbarOpen(true);
+      } else {
         setError('사용자 삭제에 실패했습니다.');
       }
+    } catch (error) {
+      console.error('사용자 삭제 오류:', error);
+      setError('사용자 삭제에 실패했습니다.');
+    } finally {
+      setDeleteDialogOpen(false);
+      setUserToDelete(null);
     }
   };
 
@@ -654,7 +668,7 @@ const UserListPage: React.FC = () => {
                             <Tooltip title={t('delete')}>
                               <IconButton
                                 size="small"
-                                onClick={(e) => { e.stopPropagation(); handleDeleteUser(user.id); }}
+                                onClick={(e) => { e.stopPropagation(); handleDeleteUser(user); }}
                                 sx={{ p: 0.5, color: '#666', '&:hover': { color: '#d32f2f', backgroundColor: 'rgba(211, 47, 47, 0.1)' } }}
                               >
                                 <DeleteIcon fontSize="small" />
@@ -1102,6 +1116,133 @@ const UserListPage: React.FC = () => {
             sx={{ fontSize: '0.75rem' }}
           >
             수정
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 사용자 삭제 확인 다이얼로그 */}
+      <Dialog 
+        open={deleteDialogOpen} 
+        onClose={() => setDeleteDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            padding: 1,
+            background: 'linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%)',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
+          }
+        }}
+      >
+        <DialogTitle 
+          sx={{ 
+            fontSize: '1.1rem', 
+            fontWeight: 600,
+            pb: 2,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.5,
+            color: '#d32f2f'
+          }}
+        >
+          <WarningIcon sx={{ fontSize: '1.5rem', color: '#d32f2f' }} />
+          사용자 삭제 확인
+        </DialogTitle>
+        
+        <DialogContent sx={{ pb: 2 }}>
+          <DialogContentText sx={{ 
+            fontSize: '0.95rem',
+            lineHeight: 1.6,
+            color: '#333',
+            mb: 2
+          }}>
+            정말로 다음 사용자를 삭제하시겠습니까?
+          </DialogContentText>
+          
+          {userToDelete && (
+            <Box sx={{ 
+              p: 2, 
+              backgroundColor: '#fff3e0',
+              borderRadius: 2,
+              border: '1px solid #ffcc80',
+              mb: 2
+            }}>
+              <Typography variant="body1" sx={{ 
+                fontWeight: 600, 
+                fontSize: '0.9rem',
+                color: '#e65100',
+                mb: 0.5
+              }}>
+                <PersonIcon sx={{ fontSize: '1rem', mr: 1, verticalAlign: 'middle' }} />
+                {userToDelete.username} ({userToDelete.userid})
+              </Typography>
+              <Typography variant="body2" sx={{ 
+                fontSize: '0.8rem', 
+                color: '#bf360c'
+              }}>
+                <BusinessIcon sx={{ fontSize: '0.9rem', mr: 1, verticalAlign: 'middle' }} />
+                역할: {userToDelete.role}
+              </Typography>
+            </Box>
+          )}
+          
+          <DialogContentText sx={{ 
+            fontSize: '0.85rem',
+            color: '#d32f2f',
+            fontWeight: 500,
+            backgroundColor: '#ffebee',
+            padding: 1.5,
+            borderRadius: 1,
+            border: '1px solid #ffcdd2'
+          }}>
+            ⚠️ <strong>주의:</strong> 이 작업은 되돌릴 수 없으며, 사용자와 관련된 모든 데이터가 영구적으로 삭제됩니다.
+          </DialogContentText>
+        </DialogContent>
+        
+        <DialogActions sx={{ 
+          px: 3, 
+          pb: 3, 
+          pt: 1,
+          gap: 1.5
+        }}>
+          <Button 
+            onClick={() => setDeleteDialogOpen(false)}
+            variant="outlined"
+            sx={{ 
+              fontSize: '0.85rem',
+              textTransform: 'none',
+              borderRadius: 2,
+              px: 3,
+              borderColor: '#ddd',
+              color: '#666',
+              '&:hover': {
+                borderColor: '#bbb',
+                backgroundColor: '#f5f5f5'
+              }
+            }}
+          >
+            취소
+          </Button>
+          <Button 
+            onClick={handleConfirmDelete}
+            variant="contained"
+            color="error"
+            sx={{ 
+              fontSize: '0.85rem',
+              textTransform: 'none',
+              fontWeight: 600,
+              borderRadius: 2,
+              px: 3,
+              background: 'linear-gradient(45deg, #d32f2f 30%, #f44336 90%)',
+              boxShadow: '0 3px 10px rgba(211, 47, 47, 0.3)',
+              '&:hover': {
+                background: 'linear-gradient(45deg, #c62828 30%, #e53935 90%)',
+                boxShadow: '0 4px 15px rgba(211, 47, 47, 0.4)'
+              }
+            }}
+          >
+            삭제하기
           </Button>
         </DialogActions>
       </Dialog>
