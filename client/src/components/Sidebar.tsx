@@ -544,7 +544,7 @@ const Sidebar: React.FC = () => {
               fontSize: level === 0 ? '0.75rem' : '0.65rem',
               fontWeight: level === 0 ? 600 : 400,
               color: '#222',
-              fontFamily: `'Pretendard', 'Noto Sans KR', 'Roboto', 'Apple SD Gothic Neo', 'sans-serif'`,
+              fontFamily: 'sans-serif',
             }}
           />
         </ListItem>
