@@ -926,7 +926,7 @@ const UserListPage: React.FC = () => {
 
                   // 현재 선택된 회사에서 사용 가능한 역할 목록 가져오기
                   const availableRoles = getAvailableRolesForCompany(formData.company_id, currentUser.role);
-                  const roleOptions = [];
+                  const roleOptions: React.ReactElement[] = [];
                   
                   console.log('사용 가능한 역할:', availableRoles);
                   
