@@ -42,27 +42,153 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, RolePermissions> = {
 
 // 메뉴별 사용자 기본 권한 (user 역할만 해당)
 export const MENU_SPECIFIC_USER_PERMISSIONS: Record<string, RolePermissions> = {
-  // 회사 정보 관리 - 조회만
+  // === 기본정보관리 ===
+  // 회사 정보 관리 - 조회만 (다양한 표기 지원)
   '회사 정보 관리': {
     can_read: true,
     can_create: false,
     can_update: false,
     can_delete: false
   },
+  '회사정보관리': {
+    can_read: true,
+    can_create: false,
+    can_update: false,
+    can_delete: false
+  },
+  'Company Management': {
+    can_read: true,
+    can_create: false,
+    can_update: false,
+    can_delete: false
+  },
   
-  // 전자결재 - 조회, 생성, 수정
+  // 나머지 기본정보관리 메뉴들 - 권한 없음 (다양한 표기 지원)
+  '사용자 목록': {
+    can_read: false,
+    can_create: false,
+    can_update: false,
+    can_delete: false
+  },
+  'User List': {
+    can_read: false,
+    can_create: false,
+    can_update: false,
+    can_delete: false
+  },
+  '메뉴 권한 관리': {
+    can_read: false,
+    can_create: false,
+    can_update: false,
+    can_delete: false
+  },
+  'Menu Permission Management': {
+    can_read: false,
+    can_create: false,
+    can_update: false,
+    can_delete: false
+  },
+  '파트너 업체 관리': {
+    can_read: false,
+    can_create: false,
+    can_update: false,
+    can_delete: false
+  },
+  'Partner Management': {
+    can_read: false,
+    can_create: false,
+    can_update: false,
+    can_delete: false
+  },
+  
+  // === 업무관리 ===
+  // 전자결재 - 조회, 생성, 수정 (다양한 표기 지원)
   '전자결재': {
     can_read: true,
     can_create: true,
     can_update: true,
     can_delete: false
   },
-  
-  // 전자 결재 (다른 표기)
   '전자 결재': {
     can_read: true,
     can_create: true,
     can_update: true,
+    can_delete: false
+  },
+  'Electronic Approval': {
+    can_read: true,
+    can_create: true,
+    can_update: true,
+    can_delete: false
+  },
+  '결재': {
+    can_read: true,
+    can_create: true,
+    can_update: true,
+    can_delete: false
+  },
+  
+  // === 회계관리 ===
+  // 회계 관련 메뉴들 - 권한 없음 (다양한 표기 지원)
+  '매출 관리': {
+    can_read: false,
+    can_create: false,
+    can_update: false,
+    can_delete: false
+  },
+  'Sales Management': {
+    can_read: false,
+    can_create: false,
+    can_update: false,
+    can_delete: false
+  },
+  '매입/매출 통계': {
+    can_read: false,
+    can_create: false,
+    can_update: false,
+    can_delete: false
+  },
+  'Accounting Statistics': {
+    can_read: false,
+    can_create: false,
+    can_update: false,
+    can_delete: false
+  },
+  // 기타 가능한 메뉴들도 기본적으로 권한 없음
+  '기본정보 관리': {
+    can_read: false,
+    can_create: false,
+    can_update: false,
+    can_delete: false
+  },
+  'Basic Information': {
+    can_read: false,
+    can_create: false,
+    can_update: false,
+    can_delete: false
+  },
+  '업무 관리': {
+    can_read: false,
+    can_create: false,
+    can_update: false,
+    can_delete: false
+  },
+  'Business Management': {
+    can_read: false,
+    can_create: false,
+    can_update: false,
+    can_delete: false
+  },
+  '회계 관리': {
+    can_read: false,
+    can_create: false,
+    can_update: false,
+    can_delete: false
+  },
+  'Accounting Management': {
+    can_read: false,
+    can_create: false,
+    can_update: false,
     can_delete: false
   }
 };
