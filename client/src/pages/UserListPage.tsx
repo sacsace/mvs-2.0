@@ -46,7 +46,9 @@ import {
   Language as LanguageIcon,
   CalendarToday as CalendarIcon,
   Update as UpdateIcon,
-  Warning as WarningIcon
+  Warning as WarningIcon,
+  CheckCircle as CheckCircleIcon,
+  Error as ErrorIcon
 } from '@mui/icons-material';
 import { useLanguage } from '../contexts/LanguageContext';
 import { filterUsersByPermission, useMenuPermission } from '../hooks/useMenuPermission';
@@ -90,6 +92,8 @@ const UserListPage: React.FC = () => {
   const [viewingUser, setViewingUser] = useState<User | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [useridAvailable, setUseridAvailable] = useState<boolean | null>(null);
+  const [checkingUserid, setCheckingUserid] = useState(false);
   const [formData, setFormData] = useState({
     userid: '',
     username: '',
@@ -108,6 +112,17 @@ const UserListPage: React.FC = () => {
     const userData = JSON.parse(localStorage.getItem('user') || '{}');
     setCurrentUser(userData);
   }, []);
+
+  // userid 중복 체크를 위한 디바운스 효과
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (formData.userid && dialogOpen) {
+        checkUseridAvailability(formData.userid);
+      }
+    }, 500); // 500ms 디바운스
+
+    return () => clearTimeout(timer);
+  }, [formData.userid, dialogOpen, editingUser]);
 
   useEffect(() => {
     if (currentUser) {
@@ -316,6 +331,42 @@ const UserListPage: React.FC = () => {
     return userPasswordStatus[user.id] ?? true; // 기본값은 true
   };
 
+  // userid 중복 체크 함수
+  const checkUseridAvailability = async (userid: string) => {
+    if (!userid || userid.trim().length === 0) {
+      setUseridAvailable(null);
+      return;
+    }
+
+    // 편집 모드에서 기존 사용자의 userid와 같으면 체크하지 않음
+    if (editingUser && editingUser.userid === userid) {
+      setUseridAvailable(true);
+      return;
+    }
+
+    setCheckingUserid(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/users/check-userid/${encodeURIComponent(userid)}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setUseridAvailable(result.available);
+      } else {
+        setUseridAvailable(null);
+      }
+    } catch (error) {
+      console.error('userid 중복 체크 오류:', error);
+      setUseridAvailable(null);
+    } finally {
+      setCheckingUserid(false);
+    }
+  };
+
   // Minsub Ventures Private Limited 회사인지 확인하는 함수
   const isMinsub = (companyId: number): boolean => {
     const company = companies.find(c => c.company_id === companyId);
@@ -421,14 +472,54 @@ const UserListPage: React.FC = () => {
       if (response.ok) {
         const result = await response.json();
         console.log('서버 응답 성공:', result);
-        setSnackbarMessage(editingUser ? '사용자 정보가 성공적으로 수정되었습니다.' : '사용자가 성공적으로 추가되었습니다.');
+        
+        // 서버에서 보낸 메시지를 우선 사용
+        let successMessage;
+        if (editingUser) {
+          successMessage = '사용자 정보가 성공적으로 수정되었습니다.';
+        } else if (result.message) {
+          successMessage = result.message; // 서버에서 보낸 메시지 (복원/생성 구분)
+        } else {
+          successMessage = '사용자가 성공적으로 추가되었습니다.';
+        }
+        
+        setSnackbarMessage(successMessage);
         setSnackbarOpen(true);
         setDialogOpen(false);
+        setUseridAvailable(null); // 상태 초기화
         fetchUsers();
       } else {
         const errorData = await response.json();
         console.error('서버 응답 오류:', errorData);
-        setError(errorData.error || '사용자 저장에 실패했습니다.');
+        
+        // 사용자 친화적인 오류 메시지 처리
+        let userFriendlyMessage = '사용자 저장에 실패했습니다.';
+        
+        if (errorData.error) {
+          const errorMessage = errorData.error.toLowerCase();
+          
+          // userid 중복 오류 처리
+          if (errorMessage.includes('userid must be unique') || 
+              errorMessage.includes('duplicate') || 
+              errorMessage.includes('unique constraint') ||
+              errorMessage.includes('not_unique')) {
+            userFriendlyMessage = `사용자 ID "${formData.userid}"는 이미 사용 중입니다. 다른 사용자 ID를 입력해주세요.`;
+          }
+          // username 중복 오류 처리
+          else if (errorMessage.includes('username') && errorMessage.includes('unique')) {
+            userFriendlyMessage = `사용자명 "${formData.username}"는 이미 사용 중입니다. 다른 사용자명을 입력해주세요.`;
+          }
+          // 일반적인 validation 오류
+          else if (errorMessage.includes('validation')) {
+            userFriendlyMessage = '입력된 정보에 오류가 있습니다. 모든 필드를 올바르게 입력했는지 확인해주세요.';
+          }
+          // 서버에서 명확한 메시지를 보낸 경우
+          else if (errorData.error && !errorData.error.includes('Error:') && !errorData.error.includes('stack')) {
+            userFriendlyMessage = errorData.error;
+          }
+        }
+        
+        setError(userFriendlyMessage);
       }
     } catch (error) {
       console.error('사용자 저장 오류:', error);
