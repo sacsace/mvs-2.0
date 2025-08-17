@@ -80,8 +80,19 @@ export const getUserPermissions = async (userId: number): Promise<UserPermission
           can_delete: menuPermission.can_delete
         });
       } else {
-        // 메뉴별 권한이 없는 경우: 역할 기본 권한 사용
-        finalMenuPermissions[menu.name] = rolePermissions;
+        // 메뉴별 권한이 없는 경우
+        if (user.role === 'root') {
+          // root 사용자는 항상 모든 권한
+          finalMenuPermissions[menu.name] = rolePermissions;
+        } else {
+          // 일반 사용자는 권한 없음 (관리자가 명시적으로 부여할 때까지)
+          finalMenuPermissions[menu.name] = {
+            can_read: false,
+            can_create: false,
+            can_update: false,
+            can_delete: false
+          };
+        }
       }
     }
 
