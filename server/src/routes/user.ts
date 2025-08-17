@@ -1,6 +1,8 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import User from '../models/User';
 import Company from '../models/Company';
+import Menu from '../models/Menu';
+import MenuPermission from '../models/MenuPermission';
 import logger from '../utils/logger';
 import jwt from 'jsonwebtoken';
 import config from '../config';
@@ -205,8 +207,25 @@ router.post('/', authMiddleware, async (req: Request & { user?: any }, res: Resp
     });
     logger.info(`New user created: ${userid}`);
 
-    // 사용자 생성 시 메뉴 권한은 부여하지 않음
-    // 메뉴 권한은 관리자가 별도로 설정해야 함
+    // 새로운 사용자에게 상위 메뉴들의 기본 읽기 권한 부여
+    const parentMenus = await Menu.findAll({
+      where: { parent_id: null }
+    });
+
+    if (parentMenus.length > 0) {
+      const defaultPermissions = parentMenus.map(menu => ({
+        user_id: user.id,
+        menu_id: menu.menu_id,
+        can_read: true,    // 상위 메뉴는 기본 읽기 권한 부여
+        can_create: false,
+        can_update: false,
+        can_delete: false,
+        create_date: new Date()
+      }));
+
+      await MenuPermission.bulkCreate(defaultPermissions);
+      logger.info(`Default menu permissions granted to user ${userid}: ${parentMenus.length} parent menus`);
+    }
 
     res.status(201).json({ 
       success: true, 

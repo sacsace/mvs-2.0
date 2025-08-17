@@ -166,11 +166,11 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
-// 메모리 사용량 모니터링
+// 메모리 사용량 모니터링 (Railway 512MB 제한 고려)
 setInterval(() => {
   const memUsage = process.memoryUsage();
   const memMB = Math.round(memUsage.rss / 1024 / 1024);
-  if (memMB > 200) { // 200MB 이상일 때 경고
-    logger.warn(`높은 메모리 사용량: ${memMB}MB`);
+  if (memMB > 400) { // 400MB 이상일 때 경고 (Railway 제한의 80%)
+    logger.warn(`높은 메모리 사용량: ${memMB}MB (Railway 제한: 512MB)`);
   }
-}, 60000); // 1분마다 체크 
+}, 300000); // 5분마다 체크 (빈도 감소) 

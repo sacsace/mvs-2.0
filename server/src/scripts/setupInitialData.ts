@@ -48,11 +48,12 @@ async function setupInitialData() {
       const hashedPassword = await bcrypt.hash('admin', 10);
       
       const user = await User.create({
-        username: 'root',
+        userid: 'admin',
+        username: 'System Administrator',
         password: hashedPassword,
         company_id: company.company_id,
-        role: 'ROOT',
-        is_active: true,
+        role: 'root',
+        default_language: 'ko',
         is_deleted: false
       }, { transaction });
 

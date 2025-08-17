@@ -250,6 +250,15 @@ router.post('/', authenticateJWT, async (req: any, res) => {
 
     logger.info('Creating new company:', { name, coi, user: currentUser?.id });
 
+    // 날짜 필드 검증 및 변환 (빈 값이나 Invalid date는 null로 변환)
+    const validateDate = (dateStr: any) => {
+      if (!dateStr || dateStr === '' || dateStr === 'Invalid date' || typeof dateStr !== 'string') {
+        return null;
+      }
+      const date = new Date(dateStr);
+      return isNaN(date.getTime()) ? null : dateStr;
+    };
+
     const company = await Company.create({
       name,
       coi,
@@ -270,8 +279,8 @@ router.post('/', authenticateJWT, async (req: any, res) => {
       email,
       phone,
       signature_url,
-      login_period_start,
-      login_period_end
+      login_period_start: validateDate(login_period_start),
+      login_period_end: validateDate(login_period_end)
     });
 
     const createdCompany = await Company.findByPk(company.company_id);
@@ -316,6 +325,15 @@ router.put('/:id', authenticateJWT, async (req: any, res) => {
       return res.status(403).json({ message: '로그인 기간은 root 사용자만 수정할 수 있습니다.' });
     }
 
+    // 날짜 필드 검증 및 변환 (빈 값이나 Invalid date는 null로 변환)
+    const validateDate = (dateStr: any) => {
+      if (!dateStr || dateStr === '' || dateStr === 'Invalid date' || typeof dateStr !== 'string') {
+        return null;
+      }
+      const date = new Date(dateStr);
+      return isNaN(date.getTime()) ? null : dateStr;
+    };
+
     await company.update({
       name,
       coi,
@@ -336,8 +354,8 @@ router.put('/:id', authenticateJWT, async (req: any, res) => {
       email,
       phone,
       signature_url,
-      login_period_start,
-      login_period_end,
+      login_period_start: validateDate(login_period_start),
+      login_period_end: validateDate(login_period_end),
       update_date: new Date()
     });
 
