@@ -477,10 +477,8 @@ const UserListPage: React.FC = () => {
         let successMessage;
         if (editingUser) {
           successMessage = '사용자 정보가 성공적으로 수정되었습니다.';
-        } else if (result.message) {
-          successMessage = result.message; // 서버에서 보낸 메시지 (복원/생성 구분)
         } else {
-          successMessage = '사용자가 성공적으로 추가되었습니다.';
+          successMessage = result.message || '사용자가 성공적으로 추가되었습니다.';
         }
         
         setSnackbarMessage(successMessage);

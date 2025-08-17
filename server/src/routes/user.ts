@@ -175,44 +175,39 @@ router.post('/', authMiddleware, async (req: Request & { user?: any }, res: Resp
     }
 
     if (deletedUser) {
-      // 삭제된 사용자가 있으면 복원하고 정보 업데이트
-      user = await deletedUser.update({
-        username,
-        password, // 모델 훅에서 해싱 처리
-        role,
-        company_id,
-        default_language: default_language || 'ko',
-        is_deleted: false,
+      // 삭제된 사용자가 있으면 userid를 변경하여 중복을 해제
+      const timestamp = Date.now();
+      const newUserid = `${deletedUser.userid}_deleted_${timestamp}`;
+      
+      await deletedUser.update({
+        userid: newUserid,
         update_date: new Date()
       });
-      logger.info(`Restored deleted user: ${userid}`);
-    } else {
-      // 새 사용자 생성
-      user = await User.create({
-        userid,
-        username,
-        password, // 모델 훅에서 해싱 처리
-        role,
-        company_id,
-        default_language: default_language || 'ko', // 기본값은 한국어
-        create_date: new Date(),
-        update_date: new Date()
-      });
-      logger.info(`New user created: ${userid}`);
+      
+      logger.info(`Changed deleted user's userid from ${userid} to ${newUserid} to allow reuse`);
     }
 
-    // 사용자 생성/복원 시 메뉴 권한은 부여하지 않음
+    // 항상 새 사용자 생성 (복원하지 않음)
+    user = await User.create({
+      userid,
+      username,
+      password, // 모델 훅에서 해싱 처리
+      role,
+      company_id,
+      default_language: default_language || 'ko', // 기본값은 한국어
+      create_date: new Date(),
+      update_date: new Date()
+    });
+    logger.info(`New user created: ${userid}`);
+
+    // 사용자 생성 시 메뉴 권한은 부여하지 않음
     // 메뉴 권한은 관리자가 별도로 설정해야 함
 
-    const responseMessage = deletedUser ? 
-      '이전에 삭제된 사용자가 성공적으로 복원되었습니다.' : 
-      '사용자가 성공적으로 생성되었습니다.';
-    
     res.status(201).json({ 
       success: true, 
-      message: responseMessage,
+      message: '사용자가 성공적으로 생성되었습니다.',
       user: { id: user.id, userid: user.userid, username: user.username, role: user.role },
-      restored: !!deletedUser
+      wasReused: !!deletedUser  // ID가 재사용되었는지 여부
     });
   } catch (error) {
     logger.error('Error creating user:', error);
