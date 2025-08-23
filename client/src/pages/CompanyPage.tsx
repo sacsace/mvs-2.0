@@ -39,7 +39,9 @@ import {
   Search as SearchIcon,
   Clear as ClearIcon,
   Upload as UploadIcon,
-  RemoveCircle as RemoveCircleIcon
+  RemoveCircle as RemoveCircleIcon,
+  ArrowUpward,
+  ArrowDownward
 } from '@mui/icons-material';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useMenuPermission } from '../hooks/useMenuPermission';
@@ -111,6 +113,10 @@ const CompanyPage: React.FC = () => {
   const [uploadingSignature, setUploadingSignature] = useState(false);
   const [stampPreview, setStampPreview] = useState<string | null>(null);
   const [uploadingStamp, setUploadingStamp] = useState(false);
+
+  // 정렬 상태 관리
+  const [sortField, setSortField] = useState<string>('');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [formData, setFormData] = useState({
     name: '',
     coi: '',
@@ -434,6 +440,65 @@ const CompanyPage: React.FC = () => {
     fetchCompanies(searchValue);
   }, [fetchCompanies]);
 
+  // 정렬 핸들러
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      // 같은 필드를 클릭한 경우 방향 토글
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // 다른 필드를 클릭한 경우 해당 필드로 오름차순 설정
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // 정렬 아이콘 렌더링
+  const renderSortIcon = (field: string) => {
+    if (sortField !== field) {
+      return null;
+    }
+    return sortDirection === 'asc' ? 
+      <ArrowUpward sx={{ fontSize: 14, ml: 0.5 }} /> : 
+      <ArrowDownward sx={{ fontSize: 14, ml: 0.5 }} />;
+  };
+
+  // 정렬된 회사 목록
+  const sortedCompanies = [...filteredCompanies].sort((a, b) => {
+    if (!sortField) return 0;
+
+    let aValue: any = '';
+    let bValue: any = '';
+
+    switch (sortField) {
+      case 'name':
+        aValue = a.name?.toLowerCase() || '';
+        bValue = b.name?.toLowerCase() || '';
+        break;
+      case 'partner_type':
+        aValue = a.partner_type || '';
+        bValue = b.partner_type || '';
+        break;
+      case 'login_period_end':
+        aValue = new Date(a.login_period_end || 0);
+        bValue = new Date(b.login_period_end || 0);
+        break;
+      case 'user_count':
+        aValue = a.user_count || 0;
+        bValue = b.user_count || 0;
+        break;
+      default:
+        return 0;
+    }
+
+    if (aValue < bValue) {
+      return sortDirection === 'asc' ? -1 : 1;
+    }
+    if (aValue > bValue) {
+      return sortDirection === 'asc' ? 1 : -1;
+    }
+    return 0;
+  });
+
   // 디바운싱 효과
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -710,6 +775,8 @@ const CompanyPage: React.FC = () => {
         </Paper>
       )}
 
+
+
       {/* 회사 정보 표시 */}
       {currentUser?.role === 'root' || currentUser?.role === 'audit' ? (
         // root와 audit은 회사 목록 표시
@@ -718,15 +785,71 @@ const CompanyPage: React.FC = () => {
             <Table>
               <TableHead>
                 <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>{t('companyName')}</TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>{t('companyType')}</TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>로그인 종료일</TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>사용자 수</TableCell>
+                  <TableCell 
+                    sx={{ 
+                      fontWeight: 600, 
+                      fontSize: '0.75rem',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      '&:hover': { backgroundColor: '#e9f4ff' }
+                    }}
+                    onClick={() => handleSort('name')}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      {t('companyName')}
+                      {renderSortIcon('name')}
+                    </Box>
+                  </TableCell>
+                  <TableCell 
+                    sx={{ 
+                      fontWeight: 600, 
+                      fontSize: '0.75rem',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      '&:hover': { backgroundColor: '#e9f4ff' }
+                    }}
+                    onClick={() => handleSort('partner_type')}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      {t('companyType')}
+                      {renderSortIcon('partner_type')}
+                    </Box>
+                  </TableCell>
+                  <TableCell 
+                    sx={{ 
+                      fontWeight: 600, 
+                      fontSize: '0.75rem',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      '&:hover': { backgroundColor: '#e9f4ff' }
+                    }}
+                    onClick={() => handleSort('login_period_end')}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      로그인 종료일
+                      {renderSortIcon('login_period_end')}
+                    </Box>
+                  </TableCell>
+                  <TableCell 
+                    sx={{ 
+                      fontWeight: 600, 
+                      fontSize: '0.75rem',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      '&:hover': { backgroundColor: '#e9f4ff' }
+                    }}
+                    onClick={() => handleSort('user_count')}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      사용자 수
+                      {renderSortIcon('user_count')}
+                    </Box>
+                  </TableCell>
                   <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>{t('management')}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredCompanies.length === 0 ? (
+                {sortedCompanies.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
                       <Typography variant="body1" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
@@ -735,7 +858,7 @@ const CompanyPage: React.FC = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredCompanies.map((company) => (
+                  sortedCompanies.map((company) => (
                     <TableRow 
                       key={company.company_id} 
                       hover 

@@ -9,6 +9,7 @@ import ApprovalFile from '../models/ApprovalFile';
 import ApprovalComment from '../models/ApprovalComment';
 import User from '../models/User';
 import Company from '../models/Company';
+import { sendPushNotification } from './push';
 
 const router = express.Router();
 
@@ -49,7 +50,7 @@ const upload = multer({
 router.get('/', authenticateJWT, async (req: Request & { user?: any }, res: Response) => {
   try {
     const currentUser = req.user;
-    const { status, type, limit } = req.query; // type: 'requested' | 'received'
+    const { status, type, limit } = req.query; // type: 'request' | 'received'
 
     console.log('🔍 결재 목록 요청:', {
       userId: currentUser.id,
@@ -65,7 +66,7 @@ router.get('/', authenticateJWT, async (req: Request & { user?: any }, res: Resp
       whereCondition.status = status;
     }
 
-    if (type === 'requested') {
+    if (type === 'request') {
       whereCondition.requester_id = currentUser.id;
       console.log('📤 요청한 결재 필터링');
     } else if (type === 'received') {
@@ -271,6 +272,28 @@ router.post('/', authenticateJWT, upload.array('files', 10), async (req: Request
         }
       ]
     });
+
+    // 승인자에게 푸시 알림 전송
+    try {
+      const pushSuccess = await sendPushNotification(
+        parseInt(approver_id),
+        '새로운 결제 요청',
+        `${currentUser.username}님이 새로운 결제 요청을 보냈습니다: ${title}`,
+        {
+          url: `/approval?type=received`,
+          approvalId: approval.id
+        }
+      );
+      
+      if (pushSuccess) {
+        logger.info(`푸시 알림 전송 성공 - 승인자: ${approver_id}, 요청: ${approval.id}`);
+      } else {
+        logger.warn(`푸시 알림 전송 실패 - 승인자: ${approver_id}, 요청: ${approval.id}`);
+      }
+    } catch (pushError) {
+      logger.error('푸시 알림 전송 오류:', pushError);
+      // 푸시 알림 실패해도 결제 요청 생성은 성공으로 처리
+    }
 
     res.status(201).json({ success: true, data: createdApproval });
   } catch (error) {

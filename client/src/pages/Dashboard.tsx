@@ -6,6 +6,10 @@ import {
   Toolbar,
   Typography,
   List,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   ListItem,
   ListItemButton,
   ListItemIcon,
@@ -46,14 +50,21 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
-import UserListPage from './UserListPage';
+import UserPage from './UserPage';
 import MenuPermissionPage from './MenuPermissionPage';
 import CompanyPage from './CompanyPage';
 import PartnerPage from './PartnerPage';
 import ApprovalPage from './ApprovalPage';
 import AccountingStatisticsPage from './AccountingStatisticsPage';
+import WorkPage from './WorkPage';
+import WorkStatisticsPage from './WorkStatisticsPage';
 import InvoicePage from './InvoicePage';
 import DashboardPage from './DashboardPage';
+import PayrollPage from './PayrollPage';
+import AttendancePage from './AttendancePage';
+import NoticePage from './NoticePage';
+import ExpensePage from './ExpensePage';
+import NotificationSettings from '../components/NotificationSettings';
 
 interface MenuItem {
   menu_id: number;
@@ -118,10 +129,14 @@ const Dashboard: React.FC = () => {
   const [filteredMenus, setFilteredMenus] = useState<MenuItem[]>([]);
   const [languageMenuAnchor, setLanguageMenuAnchor] = useState<null | HTMLElement>(null);
   const [notificationCount, setNotificationCount] = useState<number>(0);
+  const [notificationDialogOpen, setNotificationDialogOpen] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState<string>('dashboard');
   const [currentMenu, setCurrentMenu] = useState<MenuItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notices, setNotices] = useState<any[]>([]);
+  const [noticeDialogOpen, setNoticeDialogOpen] = useState<boolean>(false);
+  const [selectedNotice, setSelectedNotice] = useState<any>(null);
 
   const drawerWidth = 280;
 
@@ -270,6 +285,26 @@ const Dashboard: React.FC = () => {
     }
   }, [userData?.company_id]);
 
+  const fetchNotices = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/notice?page=1&limit=3', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          setNotices(result.data);
+        }
+      }
+    } catch (error) {
+      console.error('공지사항 조회 오류:', error);
+    }
+  }, []);
+
   const fetchStats = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
@@ -357,6 +392,8 @@ const Dashboard: React.FC = () => {
     fetchStats();
     console.log('fetchNotificationCount 호출 시작');
     fetchNotificationCount();
+    console.log('fetchNotices 호출 시작');
+    fetchNotices();
   }, []); // 의존성 배열을 비워서 한 번만 실행되도록 함
 
   // 사용자 데이터가 로드된 후 회사 정보 가져오기
@@ -375,7 +412,7 @@ const Dashboard: React.FC = () => {
     return () => clearInterval(interval);
   }, [fetchNotificationCount]);
 
-  // localStorage 플래그 체크하여 알림 개수 즉시 업데이트
+  // localStorage 플래그 체크하여 알림 개수 즉시 업데이트 (내부 상태만 갱신, 아이콘은 제거됨)
   useEffect(() => {
     const checkNotificationUpdate = () => {
       const lastUpdated = localStorage.getItem('notificationUpdated');
@@ -401,6 +438,50 @@ const Dashboard: React.FC = () => {
       window.removeEventListener('focus', handleFocus);
     };
   }, [fetchNotificationCount]);
+
+  // Service Worker 메시지 수신 → 알림 클릭으로부터 페이지 전환 처리
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const handler = (event: MessageEvent) => {
+      const data: any = event.data || {};
+      if (data.type === 'NOTIFICATION_CLICKED') {
+        try {
+          const url: string = data.url || '/approval?type=received';
+          const search = new URL(url, window.location.origin).searchParams;
+          const type = (search.get('type') === 'received' ? 'received' : 'request') as 'received' | 'request';
+          // 탭 동기화를 위해 세션에 저장
+          sessionStorage.setItem('approvalPageType', type);
+          // 전자결재 페이지로 전환
+          openApprovalPage(type);
+        } catch (e) {
+          console.error('알림 클릭 처리 오류:', e);
+        }
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', handler);
+    return () => navigator.serviceWorker.removeEventListener('message', handler);
+  }, []);
+
+  const openApprovalPage = (type: 'request' | 'received') => {
+    try {
+      sessionStorage.setItem('approvalPageType', type);
+      // 전자결재 메뉴 객체 형태로 설정하여 페이지 전환
+      const approvalMenu: MenuItem = {
+        menu_id: -999,
+        name: '전자결재',
+        name_en: 'Electronic Approval',
+        parent_id: null,
+        order_num: 0,
+        icon: 'description',
+        url: '/approval',
+        description: 'Electronic approval'
+      };
+      setCurrentPage(approvalMenu.url || 'dashboard');
+      setCurrentMenu(approvalMenu);
+    } catch (e) {
+      console.error('전자결재 페이지 전환 오류:', e);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -444,6 +525,16 @@ const Dashboard: React.FC = () => {
 
   const handleLanguageMenuClose = () => {
     setLanguageMenuAnchor(null);
+  };
+
+  const handleNoticeClick = (notice: any) => {
+    setSelectedNotice(notice);
+    setNoticeDialogOpen(true);
+  };
+
+  const handleNoticeDialogClose = () => {
+    setNoticeDialogOpen(false);
+    setSelectedNotice(null);
   };
 
   const handleLanguageChange = (lang: 'ko' | 'en') => {
@@ -1440,14 +1531,19 @@ const Dashboard: React.FC = () => {
     if (!searchTerm) {
       // 대시보드 페이지
       if (currentPage === 'dashboard') {
-        return <DashboardPage menus={menus} onMenuSelect={handleMenuClick} />;
+        return <DashboardPage 
+          menus={menus} 
+          onMenuSelect={handleMenuClick}
+          notices={notices}
+          onNoticeClick={handleNoticeClick}
+        />;
       }
 
       // 다른 메뉴 페이지
       if (currentMenu) {
-        // 사용자 목록 페이지
-        if (currentMenu.url === '/users/list' || currentMenu.url === '/users' || currentMenu.name === '사용자 목록' || currentMenu.name === 'User List') {
-          return <UserListPage />;
+        // 사용자 목록 페이지 (직원 관리)
+        if (currentMenu.url === '/users/list' || currentMenu.url === '/users' || currentMenu.url === '/hris/employee' || currentMenu.name === '사용자 목록' || currentMenu.name === 'User List' || currentMenu.name === '직원 관리' || currentMenu.name === 'Employee Management') {
+          return <UserPage />;
         }
 
         // 메뉴 권한 관리 페이지
@@ -1470,6 +1566,16 @@ const Dashboard: React.FC = () => {
           return <ApprovalPage />;
         }
 
+        // 업무 관리 페이지
+        if (currentMenu.url === '/business/issue' || currentMenu.name === '업무 관리' || currentMenu.name === 'Work Management') {
+          return <WorkPage />;
+        }
+
+        // 업무 통계 페이지
+        if (currentMenu.url === '/business/statistics' || currentMenu.name === '업무 통계' || currentMenu.name === 'Work Statistics') {
+          return <WorkStatisticsPage />;
+        }
+
         // 매입/매출 통계 페이지
         if (currentMenu.url === '/accounting/statistics' || currentMenu.name === '매입/매출 통계' || currentMenu.name === 'Accounting Statistics') {
           return <AccountingStatisticsPage />;
@@ -1479,6 +1585,26 @@ const Dashboard: React.FC = () => {
         if (currentMenu.url === '/accounting/invoices' || currentMenu.url === '/invoices' || currentMenu.name === '매출 관리' || currentMenu.name === 'Invoice Management') {
           return <InvoicePage />;
         }
+
+        // 급여 관리 페이지
+        if (currentMenu.url === '/hris/payroll' || currentMenu.name === '급여 관리' || currentMenu.name === 'Payroll Management') {
+          return <PayrollPage />;
+        }
+
+                            // 근태 관리 페이지
+                    if (currentMenu.url === '/hris/attendance' || currentMenu.name === '근태 관리' || currentMenu.name === 'Attendance Management') {
+                      return <AttendancePage />;
+                    }
+
+                    // 공지사항 페이지
+                    if (currentMenu.url === '/information/notice' || currentMenu.name === '공지사항' || currentMenu.name === 'Notice') {
+                      return <NoticePage />;
+                    }
+
+                    // 지출 관리 페이지
+                    if (currentMenu.url === '/accounting/expenses' || currentMenu.name === '지출 관리' || currentMenu.name === 'Expense Management') {
+                      return <ExpensePage />;
+                    }
 
         // 다른 페이지들은 기본 템플릿 사용
         return (
@@ -1738,9 +1864,11 @@ const Dashboard: React.FC = () => {
             
             {/* 우측: 사용자 메뉴 */}
             <Box display="flex" alignItems="center" gap={1.5}>
+              {/* 알림 아이콘: 언어 아이콘 왼쪽에 배치 */}
               <Tooltip title={t('notifications')}>
                 <IconButton 
                   size="small" 
+                  onClick={() => setNotificationDialogOpen(true)}
                   sx={{ 
                     color: '#8b95a1',
                     '&:hover': { backgroundColor: '#f2f3f5' }
@@ -1751,7 +1879,7 @@ const Dashboard: React.FC = () => {
                     color="error"
                     sx={{
                       '& .MuiBadge-badge': {
-                        fontSize: '0.75rem',
+                        fontSize: '0.65rem',
                         height: 16,
                         minWidth: 16
                       }
@@ -1761,6 +1889,72 @@ const Dashboard: React.FC = () => {
                   </Badge>
                 </IconButton>
               </Tooltip>
+
+              {/* 알림 설정/상태 다이얼로그 */}
+              <Dialog open={notificationDialogOpen} onClose={() => setNotificationDialogOpen(false)} maxWidth="sm" fullWidth>
+                <Box sx={{ p: 2 }}>
+                  <NotificationSettings onClose={() => setNotificationDialogOpen(false)} />
+                </Box>
+              </Dialog>
+
+              {/* 공지사항 상세보기 다이얼로그 */}
+              <Dialog open={noticeDialogOpen} onClose={handleNoticeDialogClose} maxWidth="md" fullWidth>
+                <DialogTitle sx={{ fontSize: '0.85rem', fontWeight: 700, pb: 1 }}>
+                  <Box display="flex" alignItems="center" gap={1}>
+                    {selectedNotice?.is_pinned && (
+                      <Chip
+                        label="고정"
+                        size="small"
+                        color="warning"
+                        sx={{ fontSize: '0.7rem', height: '20px' }}
+                      />
+                    )}
+                    <Typography variant="h6" sx={{ fontSize: '1rem' }}>
+                      {selectedNotice?.title}
+                    </Typography>
+                  </Box>
+                </DialogTitle>
+                <DialogContent>
+                  {selectedNotice && (
+                    <Box>
+                      <Grid container spacing={2} mb={3}>
+                        <Grid item xs={6}>
+                          <Typography variant="body2" color="text.secondary">
+                            <strong>작성자:</strong> {selectedNotice.Author?.username}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography variant="body2" color="text.secondary">
+                            <strong>우선순위:</strong> {
+                              selectedNotice.priority === 'high' ? '높음' : 
+                              selectedNotice.priority === 'medium' ? '보통' : '낮음'
+                            }
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography variant="body2" color="text.secondary">
+                            <strong>작성일:</strong> {new Date(selectedNotice.created_at).toLocaleDateString('ko-KR')}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography variant="body2" color="text.secondary">
+                            <strong>조회수:</strong> {selectedNotice.view_count}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+                      <Divider sx={{ my: 2 }} />
+                      <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+                        {selectedNotice.content}
+                      </Typography>
+                    </Box>
+                  )}
+                </DialogContent>
+                <DialogActions>
+                  <Button onClick={handleNoticeDialogClose}>닫기</Button>
+                </DialogActions>
+              </Dialog>
+
+              {/* 언어 변경 메뉴 */}
               
               {/* 언어 변경 메뉴 */}
               <Tooltip title={t('language')}>

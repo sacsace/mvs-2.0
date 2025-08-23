@@ -66,14 +66,14 @@ router.get('/statistics', authenticateJWT, async (req: Request & { user?: any },
     // 2. 월별 통계
     const monthlyStats = await sequelize.query(`
       SELECT 
-        strftime('%Y-%m', transaction_date) as month,
+        TO_CHAR(transaction_date, 'YYYY-MM') as month,
         transaction_type,
         COUNT(*) as count,
         SUM(total_amount) as total_amount,
         AVG(total_amount) as avg_amount
-      FROM [transaction] 
+      FROM "transaction" 
       WHERE transaction_date BETWEEN ? AND ? ${targetCompanyId ? 'AND company_id = ?' : ''}
-      GROUP BY strftime('%Y-%m', transaction_date), transaction_type
+      GROUP BY TO_CHAR(transaction_date, 'YYYY-MM'), transaction_type
       ORDER BY month DESC, transaction_type
     `, {
       replacements: targetCompanyId ? [start, end, targetCompanyId] : [start, end],
@@ -99,10 +99,10 @@ router.get('/statistics', authenticateJWT, async (req: Request & { user?: any },
         t.transaction_type,
         COUNT(*) as count,
         SUM(t.total_amount) as total_amount
-      FROM [transaction] t
+      FROM "transaction" t
       JOIN company c ON t.partner_company_id = c.company_id
       WHERE t.transaction_date BETWEEN ? AND ? ${targetCompanyId ? 'AND t.company_id = ?' : ''}
-      GROUP BY t.partner_company_id, t.transaction_type
+      GROUP BY c.name, t.transaction_type
       ORDER BY total_amount DESC
       LIMIT 10
     `, {

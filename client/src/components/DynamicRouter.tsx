@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import axios from 'axios';
 import DynamicPage from './DynamicPage';
 import MenuManagement from '../pages/MenuManagement';
+import UserPage from '../pages/UserPage';
 import InvoicePage from '../pages/InvoicePage';
 import EInvoicePage from '../pages/EInvoicePage';
 import { CircularProgress, Box, Typography } from '@mui/material';
@@ -122,7 +123,7 @@ const DynamicRouter: React.FC = () => {
       
       {/* 기본 라우트들 */}
       <Route path="/dashboard" element={<div>대시보드</div>} />
-      <Route path="/users" element={<div>사용자 관리</div>} />
+              <Route path="/users" element={<UserPage />} />
       <Route path="/permissions" element={<div>권한 관리</div>} />
       <Route path="/menus" element={<MenuManagement />} />
       <Route path="/invoices" element={<div>Invoice 관리</div>} />

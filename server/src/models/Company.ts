@@ -31,14 +31,16 @@ class Company extends Model {
 
 Company.init(
   {
-    company_id: {
+    id: {
       type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true,
+      field: 'company_id',
     },
     name: {
       type: DataTypes.STRING(100),
       allowNull: false,
+      field: 'name',
     },
     coi: {
       type: DataTypes.STRING(30),

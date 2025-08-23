@@ -172,7 +172,7 @@ const menuItems = [
     icon: <Dashboard />
   },
   {
-    name: '사용자 관리',
+            name: '직원 정보 관리',
     path: '/dashboard/user',
     icon: <People />
   },

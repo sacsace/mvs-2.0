@@ -1,0 +1,225 @@
+1. 인증/로그인 시스템
+JWT 기반 인증: 로그인 시 accessToken, refreshToken, user 정보 반환
+토큰은 localStorage에 저장, API 요청 시 자동으로 헤더에 포함
+토큰 만료 시 refreshToken으로 자동 갱신(401 발생 시 인터셉터에서 처리)
+토큰에는 최소한의 정보만, 상세 정보는 DB에서 별도 조회
+로그인 화면: 영문 UI, 모던 디자인, 회사 로고(6개 원) 적용
+footer는 하단 중앙 고정, “powered by Minsub Ventures Private Limited” 표시
+
+2. 라우팅/네비게이션
+React Router 사용
+Sidebar/메뉴: 권한(ROLE)에 따라 메뉴 노출 제어
+User Management, Company Management 등 시스템 관리 메뉴 분리
+ProtectedRoute: 인증 필요 페이지는 ProtectedRoute로 감싸서 미인증 시 로그인 페이지로 이동
+
+4. API 연동
+Server 와 Client 로 나눈다
+모든 소스를 모듈로 만들어서 불필요한 수정을 최소환 한다.
+
+5. 에러/로딩 처리
+에러 메시지: 서버에서 내려주는 errorCode/message에 따라 상세 안내
+401/403/500 등 상황별 안내문구 분리
+로딩 상태: 로그인, 데이터 fetch 등 주요 액션에 CircularProgress 등 표시
+
+6. 디자인/UX
+MUI(Material-UI) 기반
+모던/심플/반응형
+로고/컬러/폰트 일관성 유지
+
+7. 기타
+코드 구조: contexts/, pages/, components/, types/ 등 폴더 분리
+타입스크립트 사용 불필요한 fetch, 중복 코드 제거
+주요 유틸/훅: useAuth, useApi 등
+
+8. 메뉴가 생성되면 빈페이지의 파일도 동시에 생성한다.
+
+9. 로그인 페이지에서 user 테이블에 데이터가 없으면 최초 데이터를 입력할수 있는 화면을 만든다.
+
+======================================================
+
+
+db: mvs
+password : mvs@db@2025
+
+Table "company" {
+  "company_id" SERIAL [pk, increment]
+  "name" VARCHAR(100) [not null]
+  "coi" VARCHAR(30) [unique, not null]
+  "pan" VARCHAR(20)
+  "iec" VARCHAR(20)
+  "msme" VARCHAR(20)
+  "bank_name" VARCHAR(100)
+  "account_holder" VARCHAR(100)
+  "account_number" VARCHAR(50)
+  "gst_loginid" varchar(50)
+  "gst_loginpass" varchar(50)
+  "ifsc_code" VARCHAR(20)
+  "address" VARCHAR(255)
+  "pincode" INTEGER [not null]
+  "is_deleted" BOOLEAN [default: FALSE]
+  "create_date" TIMESTAMP [default: `NOW()`]
+  "update_date" TIMESTAMP [default: `NOW()`]
+}
+
+Table "company_gst" {
+  "id" SERIAL [pk, increment]
+  "company_id" INTEGER [not null]
+  "gst_number" VARCHAR(20) [not null]
+  "gst_address" VARCHAR(100) [not null]
+  "is_deleted" BOOLEAN [default: FALSE]
+  "create_date" TIMESTAMP [default: `NOW()`]
+  "update_date" TIMESTAMP [default: `NOW()`]
+}
+
+Table "user" {
+  "id" SERIAL [pk, increment]
+  "userid" VARCHAR(50) [unique, not null]
+  "password" VARCHAR [not null]
+  "company_id" INTEGER [not null]
+  "name" VARCHAR(20)
+  "role" VARCHAR(20) [not null]
+  "is_deleted" BOOLEAN [default: FALSE]
+  "create_date" TIMESTAMP [default: `NOW()`]
+  "update_date" TIMESTAMP [default: `NOW()`]
+}
+
+Table "menu" {
+  "menu_id" SERIAL [pk, increment]
+  "menu_name" VARCHAR(100) [not null]
+  "icon" VARCHAR(50)
+  "order_num" INTEGER
+  "parent_id" INTEGER
+  "is_deleted" BOOLEAN [default: FALSE]
+  "create_date" TIMESTAMP [default: `NOW()`]
+  "update_date" TIMESTAMP [default: `NOW()`]
+}
+
+Table "menu_permission" {
+  "id" SERIAL [pk, increment]
+  "menu_id" INTEGER [not null]
+  "userid" varchar(50) [not null]
+  "role" VARCHAR(20) [not null]
+  "is_deleted" BOOLEAN [default: FALSE]
+  "create_date" TIMESTAMP [default: `NOW()`]
+  "update_date" TIMESTAMP [default: `NOW()`]
+
+  Indexes {
+    (menu_id, role) [unique, name: "menu_permission_menu_id_role_unique"]
+  }
+}
+
+Table "code" {
+  "code_id" SERIAL [pk, increment]
+  "code_name" VARCHAR(100) [not null]
+  "code" varchar(50) [not null]
+  "is_deleted" BOOLEAN [default: FALSE]
+  "create_date" TIMESTAMP [default: `NOW()`]
+  "update_date" TIMESTAMP [default: `NOW()`]
+}
+
+Table "invoice" {
+  "id" SERIAL [pk, increment]
+  "irn" VARCHAR(64) [unique]
+  "company_id" SERIAL [pk, increment]
+  "ack_no" VARCHAR(32)
+  "ack_date" TIMESTAMP
+  "invoice_no" VARCHAR(32) [not null]
+  "invoice_date" DATE [not null]
+  "seller_gstin" VARCHAR(15) [not null]
+  "buyer_gstin" VARCHAR(15) [not null]
+  "seller_name" VARCHAR(100)
+  "buyer_name" VARCHAR(100)
+  "total_amount" NUMERIC(15,2) [not null]
+  "total_taxable" NUMERIC(15,2)
+  "total_igst" NUMERIC(15,2)
+  "total_cgst" NUMERIC(15,2)
+  "total_sgst" NUMERIC(15,2)
+  "total_cess" NUMERIC(15,2)
+  "place_of_supply" VARCHAR(2)
+  "invoice_type" VARCHAR(20)
+  "is_cancelled" BOOLEAN [default: FALSE]
+  "create_date" TIMESTAMP [default: `NOW()`]
+  "update_date" TIMESTAMP [default: `NOW()`]
+}
+
+Table "invoice_item" {
+  "id" SERIAL [pk, increment]
+  "invoice_id" INTEGER [not null]
+  "item_no" INTEGER [not null]
+  "description" VARCHAR(255) [not null]
+  "hsn_code" VARCHAR(10)
+  "quantity" NUMERIC(15,2) [not null]
+  "unit" VARCHAR(10)
+  "unit_price" NUMERIC(15,2) [not null]
+  "taxable_value" NUMERIC(15,2) [not null]
+  "igst_rate" NUMERIC(5,2)
+  "igst_amount" NUMERIC(15,2)
+  "cgst_rate" NUMERIC(5,2)
+  "cgst_amount" NUMERIC(15,2)
+  "sgst_rate" NUMERIC(5,2)
+  "sgst_amount" NUMERIC(15,2)
+  "cess_rate" NUMERIC(5,2)
+  "cess_amount" NUMERIC(15,2)
+}
+
+Table "payment_voucher" {
+  "pv_id" SERIAL [pk, increment]
+  "pv_no" VARCHAR(30) [unique, not null]
+  "company_id" INTEGER
+  "userid" INTEGER
+  "submit_date" DATE [not null]
+  "purpose" VARCHAR(255)
+  "status" VARCHAR(20) [default: 'SUBMITTED']
+  "approved_by" INTEGER
+  "approved_date" DATE
+  "remarks" VARCHAR(255)
+  "create_date" TIMESTAMP [default: `NOW()`]
+  "update_date" TIMESTAMP [default: `NOW()`]
+}
+
+Table "pv_item" {
+  "item_id" SERIAL [pk, increment]
+  "pv_id" INTEGER [not null]
+  "description" VARCHAR(255) [not null]
+  "unit_price" NUMERIC(15,2) [not null]
+  "qty" NUMERIC(15,2) [not null]
+  "cgst" NUMERIC(15,2) [not null]
+  "Sgst" NUMERIC(15,2) [not null]
+  "igst" NUMERIC(15,2) [not null]
+  "invoice_date" DATE
+  "category" VARCHAR(50)
+  "remarks" VARCHAR(255)
+}
+
+Table "expense_attachment" {
+  "id" SERIAL [pk, increment]
+  "pv_id" INTEGER [not null]
+  "file_path" VARCHAR(255) [not null]
+  "uploaded_at" TIMESTAMP [default: `NOW()`]
+}
+
+Ref:"payment_voucher"."pv_id" < "pv_item"."pv_id" [delete: cascade]
+
+Ref:"payment_voucher"."pv_id" < "expense_attachment"."pv_id" [delete: cascade]
+
+
+Ref: "company"."company_id" < "payment_voucher"."company_id"
+
+Ref: "user"."userid" < "payment_voucher"."userid"
+
+Ref:"invoice"."id" < "invoice_item"."invoice_id" [delete: cascade]
+
+Ref:"company"."company_id" < "user"."company_id"
+
+Ref:"company"."company_id" < "company_gst"."company_id"
+
+Ref:"menu"."menu_id" < "menu"."parent_id"
+
+Ref:"menu"."menu_id" < "menu_permission"."menu_id"
+
+Ref: "user"."userid" < "menu_permission"."userid"
+
+Ref: "company"."company_id" < "invoice"."company_id"
+
+========================
+

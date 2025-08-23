@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Box, Button, TextField, Typography, Paper, CircularProgress, Alert, Avatar, Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText } from "@mui/material";
+import { Box, Button, TextField, Typography, Paper, CircularProgress, Alert, Avatar, Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText, IconButton, Menu, MenuItem } from "@mui/material";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import Logo from "../components/Logo";
 import Footer from "../components/Footer";
-import { Lock as LockIcon, Person as PersonIcon, Warning as WarningIcon } from '@mui/icons-material';
+import { Lock as LockIcon, Person as PersonIcon, Warning as WarningIcon, Language as LanguageIcon } from '@mui/icons-material';
 import { useLanguage } from "../contexts/LanguageContext";
 import { AuthUtils } from "../utils/auth";
 
@@ -53,7 +53,7 @@ const login = async (userid: string, password: string) => {
 };
 
 export default function LoginPage() {
-  const { setLanguage } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const [form, setForm] = useState({ userid: "", password: "" });
@@ -62,6 +62,7 @@ export default function LoginPage() {
   const [showExpiredDialog, setShowExpiredDialog] = useState(false);
   const [expiredMessage, setExpiredMessage] = useState("");
   const [expiredDialogTitle, setExpiredDialogTitle] = useState("로그인 기간 만료");
+  const [languageMenuAnchor, setLanguageMenuAnchor] = useState<null | HTMLElement>(null);
 
   // 이미 로그인된 사용자는 대시보드로 리다이렉트
   useEffect(() => {
@@ -75,6 +76,20 @@ export default function LoginPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
     setError(""); // 입력 시 에러 메시지 초기화
+  };
+
+  // 언어 메뉴 관련 함수들
+  const handleLanguageMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setLanguageMenuAnchor(event.currentTarget);
+  };
+
+  const handleLanguageMenuClose = () => {
+    setLanguageMenuAnchor(null);
+  };
+
+  const handleLanguageChange = (lang: 'ko' | 'en') => {
+    setLanguage(lang);
+    handleLanguageMenuClose();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -181,6 +196,47 @@ export default function LoginPage() {
 
   return (
     <Box className="login-container">
+      {/* 상단 언어 선택 버튼 */}
+      <Box sx={{ position: 'absolute', top: 20, right: 20 }}>
+        <IconButton
+          onClick={handleLanguageMenuOpen}
+          sx={{ 
+            color: '#7f8c8d',
+            '&:hover': { backgroundColor: 'rgba(127, 140, 141, 0.1)' }
+          }}
+        >
+          <LanguageIcon />
+        </IconButton>
+        <Menu
+          anchorEl={languageMenuAnchor}
+          open={Boolean(languageMenuAnchor)}
+          onClose={handleLanguageMenuClose}
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'right',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }}
+        >
+          <MenuItem 
+            onClick={() => handleLanguageChange('ko')}
+            selected={language === 'ko'}
+            sx={{ fontSize: '0.9rem' }}
+          >
+            🇰🇷 한국어
+          </MenuItem>
+          <MenuItem 
+            onClick={() => handleLanguageChange('en')}
+            selected={language === 'en'}
+            sx={{ fontSize: '0.9rem' }}
+          >
+            🇺🇸 English
+          </MenuItem>
+        </Menu>
+      </Box>
+      
       <Box 
         sx={{
           display: 'flex',
@@ -211,7 +267,7 @@ export default function LoginPage() {
                 fontWeight: 500
               }}
             >
-              Welcome to Management System
+              {t('welcomeToManagementSystem')}
             </Typography>
         </Box>
 
@@ -244,7 +300,7 @@ export default function LoginPage() {
                 color: '#7f8c8d'
               }}
             >
-              Please enter your account information
+              {t('enterAccountInfo')}
             </Typography>
           </Box>
 
@@ -268,7 +324,7 @@ export default function LoginPage() {
             <TextField
               fullWidth
               name="userid"
-              label="User ID"
+              label={t('username')}
               value={form.userid}
               onChange={handleChange}
               margin="normal"
@@ -294,7 +350,7 @@ export default function LoginPage() {
             <TextField
               fullWidth
               name="password"
-              label="Password"
+              label={t('password')}
               type="password"
               value={form.password}
               onChange={handleChange}
@@ -345,7 +401,7 @@ export default function LoginPage() {
               {loading ? (
                 <CircularProgress size={24} sx={{ color: 'white' }} />
               ) : (
-                'Login'
+                t('loginButton')
               )}
             </Button>
 

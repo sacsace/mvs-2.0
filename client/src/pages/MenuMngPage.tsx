@@ -239,7 +239,7 @@ const MenuMngPage: React.FC = () => {
               <ListItemText primary="정보관리" />
             </ListItem>
             <List component="div" disablePadding sx={{ pl: 2 }}>
-              <ListItem button><ListItemText primary="사용자 관리" /></ListItem>
+                              <ListItem button><ListItemText primary="직원 정보 관리" /></ListItem>
               <ListItem button><ListItemText primary="메뉴 관리" /></ListItem>
               <ListItem button><ListItemText primary="메뉴권한관리" /></ListItem>
               <ListItem button><ListItemText primary="협력업체 관리" /></ListItem>

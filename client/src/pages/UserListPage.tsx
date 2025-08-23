@@ -48,7 +48,9 @@ import {
   Update as UpdateIcon,
   Warning as WarningIcon,
   CheckCircle as CheckCircleIcon,
-  Error as ErrorIcon
+  Error as ErrorIcon,
+  ArrowUpward,
+  ArrowDownward
 } from '@mui/icons-material';
 import { useLanguage } from '../contexts/LanguageContext';
 import { filterUsersByPermission, useMenuPermission } from '../hooks/useMenuPermission';
@@ -84,6 +86,10 @@ const UserListPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<string>('all');
   const [filterCompany, setFilterCompany] = useState<string>('all');
+
+  // 정렬 상태 관리
+  const [sortField, setSortField] = useState<string>('');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // 다이얼로그 상태
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -525,6 +531,28 @@ const UserListPage: React.FC = () => {
     }
   };
 
+  // 정렬 핸들러
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      // 같은 필드를 클릭한 경우 방향 토글
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // 다른 필드를 클릭한 경우 해당 필드로 오름차순 설정
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // 정렬 아이콘 렌더링
+  const renderSortIcon = (field: string) => {
+    if (sortField !== field) {
+      return null;
+    }
+    return sortDirection === 'asc' ? 
+      <ArrowUpward sx={{ fontSize: 14, ml: 0.5 }} /> : 
+      <ArrowDownward sx={{ fontSize: 14, ml: 0.5 }} />;
+  };
+
   // 필터링된 사용자 목록
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.userid.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -535,7 +563,52 @@ const UserListPage: React.FC = () => {
     return matchesSearch && matchesRole && matchesCompany;
   });
 
-  const paginatedUsers = filteredUsers.slice(
+  // 정렬된 사용자 목록
+  const sortedUsers = [...filteredUsers].sort((a, b) => {
+    if (!sortField) return 0;
+
+    let aValue: any = '';
+    let bValue: any = '';
+
+    switch (sortField) {
+      case 'userid':
+        aValue = a.userid?.toLowerCase() || '';
+        bValue = b.userid?.toLowerCase() || '';
+        break;
+      case 'username':
+        aValue = a.username?.toLowerCase() || '';
+        bValue = b.username?.toLowerCase() || '';
+        break;
+      case 'role':
+        aValue = a.role || '';
+        bValue = b.role || '';
+        break;
+      case 'company':
+        aValue = a.company?.name?.toLowerCase() || '';
+        bValue = b.company?.name?.toLowerCase() || '';
+        break;
+      case 'create_date':
+        aValue = new Date(a.create_date || 0);
+        bValue = new Date(b.create_date || 0);
+        break;
+      case 'update_date':
+        aValue = new Date(a.update_date || 0);
+        bValue = new Date(b.update_date || 0);
+        break;
+      default:
+        return 0;
+    }
+
+    if (aValue < bValue) {
+      return sortDirection === 'asc' ? -1 : 1;
+    }
+    if (aValue > bValue) {
+      return sortDirection === 'asc' ? 1 : -1;
+    }
+    return 0;
+  });
+
+  const paginatedUsers = sortedUsers.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
@@ -543,11 +616,15 @@ const UserListPage: React.FC = () => {
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'admin':
-        return 'error';
+        return 'error';       // 빨간색 - Administrator
       case 'root':
-        return 'warning';
+        return 'warning';     // 주황색 - System Administrator
+      case 'audit':
+        return 'info';        // 파란색 - Auditor
+      case 'user':
+        return 'success';     // 녹색 - User
       default:
-        return 'default';
+        return 'default';     // 회색 - 기타
     }
   };
 
@@ -605,16 +682,46 @@ const UserListPage: React.FC = () => {
             {t('userManagement')}
           </Typography>
         </Box>
-        {!!userListMenuPermission.can_create && (
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleAddUser}
-            sx={{ fontSize: '0.8rem', textTransform: 'none', boxShadow: 'none', borderRadius: 2, py: 0.8, px: 2, bgcolor: '#1976d2', '&:hover': { bgcolor: '#145ea8' } }}
-          >
-            {t('userAdd')}
-          </Button>
-        )}
+        {(() => {
+          // 사용자 추가 권한 = 메뉴 권한 && 역할 권한 체크
+          const hasMenuPermission = userListMenuPermission.can_create;
+          // 현재 사용자가 추가할 수 있는 역할이 있는지 확인 (일반적으로 자신과 같거나 하위 역할)
+          const hasRolePermission = currentUser && ['root', 'admin', 'audit'].includes(currentUser.role);
+          const canAddUser = hasMenuPermission && hasRolePermission;
+          
+          return (
+            <Tooltip title={canAddUser ? t('userAdd') : '권한이 없습니다'}>
+              <span>
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={handleAddUser}
+                  disabled={!canAddUser}
+                  sx={{ 
+                    fontSize: '0.8rem', 
+                    textTransform: 'none', 
+                    boxShadow: 'none', 
+                    borderRadius: 2, 
+                    py: 0.8, 
+                    px: 2, 
+                    bgcolor: canAddUser ? '#1976d2' : '#ccc',
+                    color: canAddUser ? 'white' : '#888',
+                    '&:hover': { 
+                      bgcolor: canAddUser ? '#145ea8' : '#ccc' 
+                    },
+                    '&:disabled': {
+                      bgcolor: '#ccc',
+                      color: '#888',
+                      cursor: 'not-allowed'
+                    }
+                  }}
+                >
+                  {t('userAdd')}
+                </Button>
+              </span>
+            </Tooltip>
+          );
+        })()}
       </Box>
 
       {/* 에러 메시지 */}
@@ -753,12 +860,120 @@ const UserListPage: React.FC = () => {
               <Table size="small">
                 <TableHead>
                   <TableRow sx={{ border: 0, background: '#f7fafd' }}>
-                    <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>{t('userId')}</TableCell>
-                    <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>{t('username')}</TableCell>
-                    <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>{t('role')}</TableCell>
-                    <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>{t('company')}</TableCell>
-                    <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>{t('createDate')}</TableCell>
-                    <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>{t('updateDate')}</TableCell>
+                    <TableCell 
+                      sx={{ 
+                        border: 0, 
+                        fontWeight: 700, 
+                        fontSize: '0.8rem', 
+                        background: 'none', 
+                        py: 0.7, 
+                        color: '#222',
+                        cursor: 'pointer',
+                        userSelect: 'none',
+                        '&:hover': { backgroundColor: '#e9f4ff' }
+                      }}
+                      onClick={() => handleSort('userid')}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        {t('userId')}
+                        {renderSortIcon('userid')}
+                      </Box>
+                    </TableCell>
+                    <TableCell 
+                      sx={{ 
+                        border: 0, 
+                        fontWeight: 700, 
+                        fontSize: '0.8rem', 
+                        background: 'none', 
+                        py: 0.7, 
+                        color: '#222',
+                        cursor: 'pointer',
+                        userSelect: 'none',
+                        '&:hover': { backgroundColor: '#e9f4ff' }
+                      }}
+                      onClick={() => handleSort('username')}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        {t('username')}
+                        {renderSortIcon('username')}
+                      </Box>
+                    </TableCell>
+                    <TableCell 
+                      sx={{ 
+                        border: 0, 
+                        fontWeight: 700, 
+                        fontSize: '0.8rem', 
+                        background: 'none', 
+                        py: 0.7, 
+                        color: '#222',
+                        cursor: 'pointer',
+                        userSelect: 'none',
+                        '&:hover': { backgroundColor: '#e9f4ff' }
+                      }}
+                      onClick={() => handleSort('role')}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        {t('role')}
+                        {renderSortIcon('role')}
+                      </Box>
+                    </TableCell>
+                    <TableCell 
+                      sx={{ 
+                        border: 0, 
+                        fontWeight: 700, 
+                        fontSize: '0.8rem', 
+                        background: 'none', 
+                        py: 0.7, 
+                        color: '#222',
+                        cursor: 'pointer',
+                        userSelect: 'none',
+                        '&:hover': { backgroundColor: '#e9f4ff' }
+                      }}
+                      onClick={() => handleSort('company')}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        {t('company')}
+                        {renderSortIcon('company')}
+                      </Box>
+                    </TableCell>
+                    <TableCell 
+                      sx={{ 
+                        border: 0, 
+                        fontWeight: 700, 
+                        fontSize: '0.8rem', 
+                        background: 'none', 
+                        py: 0.7, 
+                        color: '#222',
+                        cursor: 'pointer',
+                        userSelect: 'none',
+                        '&:hover': { backgroundColor: '#e9f4ff' }
+                      }}
+                      onClick={() => handleSort('create_date')}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        {t('createDate')}
+                        {renderSortIcon('create_date')}
+                      </Box>
+                    </TableCell>
+                    <TableCell 
+                      sx={{ 
+                        border: 0, 
+                        fontWeight: 700, 
+                        fontSize: '0.8rem', 
+                        background: 'none', 
+                        py: 0.7, 
+                        color: '#222',
+                        cursor: 'pointer',
+                        userSelect: 'none',
+                        '&:hover': { backgroundColor: '#e9f4ff' }
+                      }}
+                      onClick={() => handleSort('update_date')}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        {t('updateDate')}
+                        {renderSortIcon('update_date')}
+                      </Box>
+                    </TableCell>
                     <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>{t('actions')}</TableCell>
                   </TableRow>
                 </TableHead>
@@ -798,28 +1013,67 @@ const UserListPage: React.FC = () => {
                       </TableCell>
                       <TableCell sx={{ border: 0, py: 0.7 }}>
                         <Box sx={{ display: 'flex', gap: 1 }}>
-                          {!!userListMenuPermission.can_update && (
-                            <Tooltip title={t('edit')}>
-                              <IconButton
-                                size="small"
-                                onClick={(e) => { e.stopPropagation(); handleEditUser(user); }}
-                                sx={{ p: 0.5, color: '#666', '&:hover': { color: '#1976d2', backgroundColor: 'rgba(25, 118, 210, 0.1)' } }}
-                              >
-                                <EditIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          )}
-                          {!!userListMenuPermission.can_delete && (
-                            <Tooltip title={t('delete')}>
-                              <IconButton
-                                size="small"
-                                onClick={(e) => { e.stopPropagation(); handleDeleteUser(user); }}
-                                sx={{ p: 0.5, color: '#666', '&:hover': { color: '#d32f2f', backgroundColor: 'rgba(211, 47, 47, 0.1)' } }}
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          )}
+                          {(() => {
+                            // 역할 기반 권한 확인 (상위 역할만 하위 역할 수정 가능)
+                            const availableRoles = getAvailableRolesForCompany(user.company_id, currentUser?.role || '');
+                            const hasRolePermission = availableRoles.includes(user.role);
+                            
+                            // 수정 권한 = 메뉴 권한 && 역할 권한
+                            const canEdit = userListMenuPermission.can_update && hasRolePermission;
+                            // 삭제 권한 = 메뉴 권한 && 역할 권한
+                            const canDelete = userListMenuPermission.can_delete && hasRolePermission;
+                            
+                            return (
+                              <>
+                                <Tooltip title={canEdit ? t('edit') : '권한이 없습니다'}>
+                                  <span>
+                                    <IconButton
+                                      size="small"
+                                      onClick={(e) => { e.stopPropagation(); handleEditUser(user); }}
+                                      disabled={!canEdit}
+                                      sx={{ 
+                                        p: 0.5, 
+                                        color: canEdit ? '#666' : '#ccc',
+                                        '&:hover': { 
+                                          color: canEdit ? '#1976d2' : '#ccc', 
+                                          backgroundColor: canEdit ? 'rgba(25, 118, 210, 0.1)' : 'transparent' 
+                                        },
+                                        '&:disabled': {
+                                          color: '#ccc',
+                                          cursor: 'not-allowed'
+                                        }
+                                      }}
+                                    >
+                                      <EditIcon fontSize="small" />
+                                    </IconButton>
+                                  </span>
+                                </Tooltip>
+                                <Tooltip title={canDelete ? t('delete') : '권한이 없습니다'}>
+                                  <span>
+                                    <IconButton
+                                      size="small"
+                                      onClick={(e) => { e.stopPropagation(); handleDeleteUser(user); }}
+                                      disabled={!canDelete}
+                                      sx={{ 
+                                        p: 0.5, 
+                                        color: canDelete ? '#666' : '#ccc',
+                                        '&:hover': { 
+                                          color: canDelete ? '#d32f2f' : '#ccc', 
+                                          backgroundColor: canDelete ? 'rgba(211, 47, 47, 0.1)' : 'transparent' 
+                                        },
+                                        '&:disabled': {
+                                          color: '#ccc',
+                                          cursor: 'not-allowed'
+                                        }
+                                      }}
+                                    >
+                                      <DeleteIcon fontSize="small" />
+                                    </IconButton>
+                                  </span>
+                                </Tooltip>
+                              </>
+                            );
+                          })()}
                         </Box>
                       </TableCell>
                     </TableRow>
@@ -832,7 +1086,7 @@ const UserListPage: React.FC = () => {
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
-            count={filteredUsers.length}
+            count={sortedUsers.length}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}
@@ -851,7 +1105,7 @@ const UserListPage: React.FC = () => {
       {/* 사용자 추가/수정 다이얼로그 */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 2 } }}>
         <DialogTitle sx={{ fontSize: '0.85rem', fontWeight: 700, pb: 1 }}>
-          {editingUser ? t('userEdit') : t('userAdd')}
+          {editingUser ? '직원 정보 수정' : '직원 정보 관리'}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 1 }}>

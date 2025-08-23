@@ -8,8 +8,8 @@ const router = express.Router();
 // 파트너사 목록 조회 (내 회사 관련만)
 router.get('/', authenticateJWT, async (req: Request, res: Response) => {
   try {
-    const userCompanyId = req.user?.company_id;
-    const userRole = req.user?.role;
+    const userCompanyId = (req as any).user?.company_id;
+    const userRole = (req as any).user?.role;
 
     if (!userCompanyId) {
       return res.status(400).json({ error: '회사 정보가 없습니다.' });
@@ -67,7 +67,7 @@ router.get('/:id', authenticateJWT, async (req: Request, res: Response) => {
 // 파트너사 추가
 router.post('/', authenticateJWT, async (req: Request, res: Response) => {
   try {
-    const userCompanyId = req.user?.company_id;
+    const userCompanyId = (req as any).user?.company_id;
 
     if (!userCompanyId) {
       return res.status(400).json({ error: '회사 정보가 없습니다.' });
@@ -153,8 +153,8 @@ router.post('/', authenticateJWT, async (req: Request, res: Response) => {
 router.put('/:id', authenticateJWT, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const userCompanyId = req.user?.company_id;
-    const userRole = req.user?.role;
+    const userCompanyId = (req as any).user?.company_id;
+    const userRole = (req as any).user?.role;
     const updateData = req.body;
 
     if (!userCompanyId) {
@@ -202,8 +202,8 @@ router.put('/:id', authenticateJWT, async (req: Request, res: Response) => {
 router.delete('/:id', authenticateJWT, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const userCompanyId = req.user?.company_id;
-    const userRole = req.user?.role;
+    const userCompanyId = (req as any).user?.company_id;
+    const userRole = (req as any).user?.role;
 
     if (!userCompanyId) {
       return res.status(400).json({ error: '회사 정보가 없습니다.' });
@@ -277,19 +277,34 @@ router.patch('/:id/toggle-status', authenticateJWT, async (req: Request, res: Re
 router.get('/type/:type', authenticateJWT, async (req: Request, res: Response) => {
   try {
     const { type } = req.params;
+    const userCompanyId = (req as any).user?.company_id;
+    const userRole = (req as any).user?.role;
+
+    if (!userCompanyId) {
+      return res.status(400).json({ error: '회사 정보가 없습니다.' });
+    }
 
     if (!['supplier', 'customer', 'both'].includes(type)) {
       return res.status(400).json({ error: '올바르지 않은 파트너 타입입니다.' });
     }
 
+    // 로그인한 회사의 파트너만 조회
+    let whereClause: any = { 
+      partner_type: type,
+      is_deleted: false 
+    };
+
+    // root와 audit는 모든 파트너를 볼 수 있음
+    if (userRole !== 'root' && userRole !== 'audit') {
+      whereClause.company_id = userCompanyId;
+    }
+
     const partners = await Partner.findAll({
-      where: { 
-        partner_type: type,
-        is_deleted: false 
-      },
+      where: whereClause,
       order: [['name', 'ASC']]
     });
 
+    logger.info(`User company ${userCompanyId} - Found ${partners.length} partners of type ${type}`);
     res.json(partners);
   } catch (error) {
     logger.error('Error fetching partners by type:', error);

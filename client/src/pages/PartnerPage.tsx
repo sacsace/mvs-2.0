@@ -36,7 +36,11 @@ import {
   CheckBox,
   CheckBoxOutlineBlank,
   Search,
-  Clear
+  Clear,
+  AddCircle as AddIcon,
+  RemoveCircle as RemoveCircleIcon,
+  ArrowUpward,
+  ArrowDownward
 } from '@mui/icons-material';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useMenuPermission } from '../hooks/useMenuPermission';
@@ -105,10 +109,7 @@ const PartnerPage: React.FC = () => {
     coi: '',
     address: '',
     pan: '',
-    gst1: '',
-    gst2: '',
-    gst3: '',
-    gst4: '',
+    gstNumbers: [''] as string[],
     iec: '',
     msme: '',
     bank_name: '',
@@ -118,6 +119,10 @@ const PartnerPage: React.FC = () => {
     partner_type: '' as 'supplier' | 'customer' | 'both' | '',
     product_category: ''
   });
+
+  // 정렬 상태 관리
+  const [sortField, setSortField] = useState<string>('');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // 협력 업체 목록 조회
   const fetchPartners = useCallback(async () => {
@@ -215,10 +220,7 @@ const PartnerPage: React.FC = () => {
       coi: '',
       address: '',
       pan: '',
-      gst1: '',
-      gst2: '',
-      gst3: '',
-      gst4: '',
+      gstNumbers: [''],
       iec: '',
       msme: '',
       bank_name: '',
@@ -241,15 +243,16 @@ const PartnerPage: React.FC = () => {
 
   // 파트너사 수정 다이얼로그 열기
   const handleEditPartner = (partner: Partner) => {
+    // 기존 GST 데이터를 배열로 변환
+    const gstNumbers = [partner.gst1, partner.gst2, partner.gst3, partner.gst4]
+      .filter((gst): gst is string => gst !== undefined && gst.trim() !== ''); // 빈 값 제외
+    
     setFormData({
       name: partner.name,
       coi: partner.coi || '',
       address: partner.address || '',
       pan: partner.pan || '',
-      gst1: partner.gst1 || '',
-      gst2: partner.gst2 || '',
-      gst3: partner.gst3 || '',
-      gst4: partner.gst4 || '',
+      gstNumbers: gstNumbers.length > 0 ? gstNumbers : [''], // 최소 하나의 빈 필드
       iec: partner.iec || '',
       msme: partner.msme || '',
       bank_name: partner.bank_name || '',
@@ -316,13 +319,28 @@ const PartnerPage: React.FC = () => {
         : '/api/partners';
       const method = isEditing ? 'PUT' : 'POST';
 
+      // gstNumbers 배열을 gst1, gst2, gst3, gst4로 변환
+      const gstData = {
+        gst1: formData.gstNumbers[0] || '',
+        gst2: formData.gstNumbers[1] || '',
+        gst3: formData.gstNumbers[2] || '',
+        gst4: formData.gstNumbers[3] || ''
+      };
+
+      // formData에서 gstNumbers 제거하고 개별 GST 필드 추가
+      const { gstNumbers, ...restFormData } = formData;
+      const submissionData = {
+        ...restFormData,
+        ...gstData
+      };
+
       const response = await fetch(url, {
         method,
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submissionData),
       });
 
       if (response.ok) {
@@ -402,6 +420,69 @@ const PartnerPage: React.FC = () => {
     if (partnerType === 'customer') return 'success';
     if (partnerType === 'both') return 'warning';
     return 'default';
+  };
+
+  // 정렬 핸들러
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      // 같은 필드를 클릭한 경우 방향 토글
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // 다른 필드를 클릭한 경우 해당 필드로 오름차순 설정
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // 정렬된 파트너 목록
+  const sortedPartners = [...filteredPartners].sort((a, b) => {
+    if (!sortField) return 0;
+
+    let aValue: any = '';
+    let bValue: any = '';
+
+    switch (sortField) {
+      case 'name':
+        aValue = a.name?.toLowerCase() || '';
+        bValue = b.name?.toLowerCase() || '';
+        break;
+      case 'partner_type':
+        aValue = a.partner_type || '';
+        bValue = b.partner_type || '';
+        break;
+      case 'product_category':
+        aValue = a.product_category?.toLowerCase() || '';
+        bValue = b.product_category?.toLowerCase() || '';
+        break;
+      case 'gst':
+        aValue = a.gst1 || '';
+        bValue = b.gst1 || '';
+        break;
+      case 'update_date':
+        aValue = new Date(a.update_date || 0);
+        bValue = new Date(b.update_date || 0);
+        break;
+      default:
+        return 0;
+    }
+
+    if (aValue < bValue) {
+      return sortDirection === 'asc' ? -1 : 1;
+    }
+    if (aValue > bValue) {
+      return sortDirection === 'asc' ? 1 : -1;
+    }
+    return 0;
+  });
+
+  // 정렬 아이콘 렌더링
+  const renderSortIcon = (field: string) => {
+    if (sortField !== field) {
+      return null;
+    }
+    return sortDirection === 'asc' ? 
+      <ArrowUpward sx={{ fontSize: 14, ml: 0.5 }} /> : 
+      <ArrowDownward sx={{ fontSize: 14, ml: 0.5 }} />;
   };
 
   if (loading) {
@@ -514,16 +595,86 @@ const PartnerPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell sx={{ fontSize: '0.75rem', fontWeight: 600 }}>회사명</TableCell>
-              <TableCell sx={{ fontSize: '0.75rem', fontWeight: 600 }}>파트너 타입</TableCell>
-              <TableCell sx={{ fontSize: '0.75rem', fontWeight: 600 }}>취급품목</TableCell>
-              <TableCell sx={{ fontSize: '0.75rem', fontWeight: 600 }}>GST</TableCell>
-              <TableCell sx={{ fontSize: '0.75rem', fontWeight: 600 }}>등록일</TableCell>
+              <TableCell 
+                sx={{ 
+                  fontSize: '0.75rem', 
+                  fontWeight: 600, 
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  '&:hover': { backgroundColor: '#f5f5f5' }
+                }}
+                onClick={() => handleSort('name')}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  회사명
+                  {renderSortIcon('name')}
+                </Box>
+              </TableCell>
+              <TableCell 
+                sx={{ 
+                  fontSize: '0.75rem', 
+                  fontWeight: 600, 
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  '&:hover': { backgroundColor: '#f5f5f5' }
+                }}
+                onClick={() => handleSort('partner_type')}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  파트너 타입
+                  {renderSortIcon('partner_type')}
+                </Box>
+              </TableCell>
+              <TableCell 
+                sx={{ 
+                  fontSize: '0.75rem', 
+                  fontWeight: 600, 
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  '&:hover': { backgroundColor: '#f5f5f5' }
+                }}
+                onClick={() => handleSort('product_category')}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  취급품목
+                  {renderSortIcon('product_category')}
+                </Box>
+              </TableCell>
+              <TableCell 
+                sx={{ 
+                  fontSize: '0.75rem', 
+                  fontWeight: 600, 
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  '&:hover': { backgroundColor: '#f5f5f5' }
+                }}
+                onClick={() => handleSort('gst')}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  GST
+                  {renderSortIcon('gst')}
+                </Box>
+              </TableCell>
+              <TableCell 
+                sx={{ 
+                  fontSize: '0.75rem', 
+                  fontWeight: 600, 
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  '&:hover': { backgroundColor: '#f5f5f5' }
+                }}
+                onClick={() => handleSort('update_date')}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  등록일
+                  {renderSortIcon('update_date')}
+                </Box>
+              </TableCell>
               <TableCell sx={{ fontSize: '0.75rem', fontWeight: 600 }}>관리</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredPartners.length === 0 ? (
+            {sortedPartners.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                   <Typography variant="body1" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
@@ -532,7 +683,7 @@ const PartnerPage: React.FC = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredPartners.map((partner) => (
+              sortedPartners.map((partner) => (
                 <TableRow 
                   key={partner.partner_id} 
                   hover 
@@ -711,45 +862,61 @@ const PartnerPage: React.FC = () => {
                 sx={{ fontSize: '0.75rem' }}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="GST 1"
-                value={formData.gst1}
-                onChange={(e) => setFormData({ ...formData, gst1: removeSpaces(e.target.value) })}
-                size="small"
-                sx={{ fontSize: '0.75rem' }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="GST 2"
-                value={formData.gst2}
-                onChange={(e) => setFormData({ ...formData, gst2: removeSpaces(e.target.value) })}
-                size="small"
-                sx={{ fontSize: '0.75rem' }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="GST 3"
-                value={formData.gst3}
-                onChange={(e) => setFormData({ ...formData, gst3: removeSpaces(e.target.value) })}
-                size="small"
-                sx={{ fontSize: '0.75rem' }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="GST 4"
-                value={formData.gst4}
-                onChange={(e) => setFormData({ ...formData, gst4: removeSpaces(e.target.value) })}
-                size="small"
-                sx={{ fontSize: '0.75rem' }}
-              />
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" sx={{ mb: 1, fontSize: '0.75rem', fontWeight: 600 }}>
+                GST 번호
+              </Typography>
+              <Box>
+                {formData.gstNumbers?.map((gst, index) => (
+                  <Box key={index} sx={{ display: 'flex', gap: 1, mb: 1, alignItems: 'center' }}>
+                    <TextField
+                      fullWidth
+                      label={`GST ${index + 1}`}
+                      value={gst}
+                      onChange={(e) => {
+                        const newGstNumbers = [...formData.gstNumbers];
+                        newGstNumbers[index] = removeSpaces(e.target.value);
+                        setFormData(prev => ({ ...prev, gstNumbers: newGstNumbers }));
+                      }}
+                      size="small"
+                      sx={{ 
+                        '& .MuiInputLabel-root': { fontSize: '0.75rem' }, 
+                        '& .MuiInputBase-input': { fontSize: '0.75rem' }
+                      }}
+                    />
+                    {index > 0 && (
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          const newGstNumbers = formData.gstNumbers?.filter((_, i) => i !== index) || [];
+                          setFormData(prev => ({ ...prev, gstNumbers: newGstNumbers }));
+                        }}
+                        sx={{ color: '#d32f2f' }}
+                      >
+                        <RemoveCircleIcon sx={{ fontSize: 20 }} />
+                      </IconButton>
+                    )}
+                  </Box>
+                ))}
+                {(!formData.gstNumbers || formData.gstNumbers.length < 4) && (
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<AddIcon />}
+                    onClick={() => {
+                      const newGstNumbers = [...(formData.gstNumbers || ['']), ''];
+                      setFormData(prev => ({ ...prev, gstNumbers: newGstNumbers }));
+                    }}
+                    sx={{ 
+                      fontSize: '0.75rem',
+                      mt: 1,
+                      '& .MuiButton-startIcon': { mr: 0.5 }
+                    }}
+                  >
+                    GST 번호 추가
+                  </Button>
+                )}
+              </Box>
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField

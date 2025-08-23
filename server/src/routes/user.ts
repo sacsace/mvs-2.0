@@ -4,6 +4,14 @@ import Company from '../models/Company';
 import Menu from '../models/Menu';
 import MenuPermission from '../models/MenuPermission';
 import logger from '../utils/logger';
+
+// 메뉴 권한 인터페이스 정의
+interface MenuPermissionType {
+  can_read: boolean;
+  can_create: boolean;
+  can_update: boolean;
+  can_delete: boolean;
+}
 import jwt from 'jsonwebtoken';
 import config from '../config';
 
@@ -73,45 +81,98 @@ router.get('/', authMiddleware, async (req: Request & { user?: any }, res: Respo
     if (currentUser?.role === 'root') {
       // root는 모든 사용자 조회 가능
       logger.info('Root user - showing all users');
-    } else {
-      // 다른 사용자들은 메뉴 권한 체크
-      const { QueryTypes } = require('sequelize');
-      // 사용자 관련 메뉴들 체크 ('사용자 목록', '사용자 관리', 'User List' 등)
-      const menuPermission = await User.sequelize?.query(
-        `SELECT mp.can_read FROM menu_permission mp 
-         JOIN menu m ON mp.menu_id = m.menu_id 
-         WHERE mp.user_id = ? AND (m.name IN ('사용자 목록', '사용자 관리', 'User List', 'User Management') OR m.url LIKE '%users%') 
-         AND mp.can_read = true`,
-        { 
-          replacements: [currentUser.id], 
-          type: QueryTypes.SELECT 
+    } else if (currentUser?.role === 'admin' || currentUser?.role === 'audit') {
+      // admin과 audit는 역할 기반으로 기본 권한 허용하되, 메뉴 권한도 확인
+      logger.info(`${currentUser.role} user - checking permissions for user management`);
+      
+      let hasPermission = true; // 기본적으로 admin/audit는 권한 있음
+      
+      try {
+        const { getUserPermissions } = require('../utils/permissionChecker');
+        
+        // 새로운 통합 권한 시스템을 사용하여 사용자 권한 확인
+        const userPermissions = await getUserPermissions(currentUser.id);
+        
+        if (userPermissions && userPermissions.menuPermissions) {
+          // 사용자 관련 메뉴 권한 확인 (URL 기반으로 동적 체크)
+          const userManagementMenus = Object.entries(userPermissions.menuPermissions).filter(([menuName, permission]) => {
+            return menuName.includes('사용자') || menuName.toLowerCase().includes('user');
+          });
+          
+          logger.info(`User management related menus for ${currentUser.userid}:`, userManagementMenus.map(([name]) => name));
+          
+          // 사용자 관련 메뉴 중 하나라도 읽기 권한이 있으면 허용
+          const hasUserMenuPermission = userManagementMenus.some(([menuName, permission]) => {
+            const menuPermission = permission as MenuPermissionType;
+            return menuPermission.can_read;
+          });
+          
+          if (hasUserMenuPermission) {
+            logger.info(`${currentUser.userid} has user management menu permission`);
+          } else {
+            logger.info(`${currentUser.userid} has no user management menu permission, using role-based default permission for ${currentUser.role}`);
+          }
+        } else {
+          logger.info(`${currentUser.userid} has no explicit menu permissions, using role-based default permission for ${currentUser.role}`);
         }
-      );
-
-      logger.info(`Checking menu permission for user ${currentUser.userid} on user-related menus`);
-      logger.info(`Menu permission result:`, menuPermission);
-
-      if (!menuPermission || (menuPermission as any[]).length === 0) {
-        logger.info(`User ${currentUser.userid} does not have permission to view user list`);
-        return res.status(403).json({ error: '사용자 목록을 조회할 권한이 없습니다.' });
+      } catch (error) {
+        logger.error('Menu permission check failed, using role-based permission:', error);
       }
 
-      logger.info(`User ${currentUser.userid} has menu permission for user management`);
+      // admin과 audit는 같은 회사 사용자만 조회 가능
+      whereCondition.company_id = currentUser.company_id;
+      logger.info(`${currentUser.role} user - showing users from company_id: ${currentUser.company_id}`);
+    } else {
+      // user 역할은 명시적인 메뉴 권한 체크 필요
+      try {
+        const { getUserPermissions } = require('../utils/permissionChecker');
+        
+        // 새로운 통합 권한 시스템을 사용하여 사용자 권한 확인
+        const userPermissions = await getUserPermissions(currentUser.id);
+        
+        logger.info(`Checking menu permission for user ${currentUser.userid} on user-related menus`);
+        
+        if (!userPermissions || !userPermissions.menuPermissions) {
+          logger.info(`User ${currentUser.userid} has no menu permissions configured`);
+          return res.status(403).json({ error: '사용자 목록을 조회할 권한이 없습니다.' });
+        }
+        
+        // 사용자 관련 메뉴 권한 확인 (동적 체크)
+        const userManagementMenus = Object.entries(userPermissions.menuPermissions).filter(([menuName, permission]) => {
+          return menuName.includes('사용자') || menuName.toLowerCase().includes('user');
+        });
+        
+        logger.info(`User management related menus for ${currentUser.userid}:`, userManagementMenus.map(([name]) => name));
+        
+        // 사용자 관련 메뉴 중 하나라도 읽기 권한이 있는지 확인
+        const hasUserMenuPermission = userManagementMenus.some(([menuName, permission]) => {
+          const menuPermission = permission as MenuPermissionType;
+          return menuPermission.can_read;
+        });
+        
+        if (!hasUserMenuPermission) {
+          logger.info(`User ${currentUser.userid} does not have permission to view user list`);
+          return res.status(403).json({ error: '사용자 목록을 조회할 권한이 없습니다.' });
+        }
 
-      // admin과 audit는 같은 회사 사용자만, user는 자신만 조회 가능
-      if (currentUser?.role === 'admin' || currentUser?.role === 'audit') {
-        whereCondition.company_id = currentUser.company_id;
-        logger.info(`${currentUser.role} user - showing users from company_id: ${currentUser.company_id}`);
-      } else if (currentUser?.role === 'user') {
+        logger.info(`User ${currentUser.userid} has menu permission for user management`);
+        
         // 일반 사용자는 같은 회사 사용자 조회 가능
         whereCondition.company_id = currentUser.company_id;
         logger.info(`User role - showing users from company_id: ${currentUser.company_id}`);
+      } catch (error) {
+        logger.error('Menu permission check failed for user role:', error);
+        return res.status(403).json({ error: '사용자 목록을 조회할 권한이 없습니다.' });
       }
     }
 
     const users = await User.findAll({
       where: whereCondition,
-      attributes: ['id', 'userid', 'username', 'role', 'company_id', 'default_language', 'create_date', 'update_date'],
+      attributes: [
+        'id', 'userid', 'username', 'role', 'company_id', 'default_language', 
+        'create_date', 'update_date', 'profile', 'employment', 'performance', 
+        'education', 'skills', 'attendance', 'compensation'
+      ],
       include: [{
         model: Company,
         as: 'company',
@@ -203,7 +264,15 @@ router.post('/', authMiddleware, async (req: Request & { user?: any }, res: Resp
       company_id,
       default_language: default_language || 'ko', // 기본값은 한국어
       create_date: new Date(),
-      update_date: new Date()
+      update_date: new Date(),
+      // 확장된 프로필 데이터 추가
+      profile: req.body.profile || null,
+      employment: req.body.employment || null,
+      performance: req.body.performance || null,
+      education: req.body.education || null,
+      skills: req.body.skills || null,
+      attendance: req.body.attendance || null,
+      compensation: req.body.compensation || null
     });
     logger.info(`New user created: ${userid}`);
 
@@ -333,6 +402,29 @@ router.put('/:id', authMiddleware, async (req: Request & { user?: any }, res: Re
       default_language: req.body.default_language || user.default_language,
       update_date: new Date()
     };
+
+    // 확장된 프로필 데이터 추가
+    if (req.body.profile) {
+      updateData.profile = req.body.profile;
+    }
+    if (req.body.employment) {
+      updateData.employment = req.body.employment;
+    }
+    if (req.body.performance) {
+      updateData.performance = req.body.performance;
+    }
+    if (req.body.education) {
+      updateData.education = req.body.education;
+    }
+    if (req.body.skills) {
+      updateData.skills = req.body.skills;
+    }
+    if (req.body.attendance) {
+      updateData.attendance = req.body.attendance;
+    }
+    if (req.body.compensation) {
+      updateData.compensation = req.body.compensation;
+    }
 
     // 비밀번호가 제공된 경우: 모델 훅에서 해싱 처리
     if (password && password.trim() !== '') {

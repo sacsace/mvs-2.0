@@ -7,16 +7,7 @@ import type { Request } from 'express';
 import { authenticateJWT } from '../utils/jwtMiddleware';
 import { getUserPermissions } from '../utils/permissionChecker';
 
-declare module 'express-serve-static-core' {
-  interface Request {
-    user?: {
-      id?: number;
-      username?: string;
-      company_id?: number;
-      role?: string;
-    };
-  }
-}
+// Request 인터페이스는 jwtMiddleware.ts에서 확장됨
 
 const router = Router();
 
@@ -34,10 +25,10 @@ function buildMenuTree(menus: any[], parentId: number | null = null): any[] {
 router.get('/tree', authenticateJWT, async (req, res) => {
   try {
     console.log('메뉴 트리 API 호출됨');
-    console.log('사용자 정보:', req.user);
+    console.log('사용자 정보:', (req as any).user);
     
-    const userId = req.user?.id;
-    const userRole = req.user?.role;
+    const userId = (req as any).user?.id;
+    const userRole = (req as any).user?.role;
     console.log('사용자 역할:', userRole);
     
     // admin 또는 root만 접근 가능
@@ -112,7 +103,7 @@ router.get('/tree', authenticateJWT, async (req, res) => {
 // 메뉴 생성
 router.post('/', authenticateJWT, async (req, res) => {
   try {
-    const userRole = req.user?.role;
+    const userRole = (req as any).user?.role;
     
     // root만 메뉴 생성 가능
     if (userRole !== 'root') {
@@ -144,7 +135,7 @@ router.post('/', authenticateJWT, async (req, res) => {
 // 메뉴 수정
 router.put('/:id', authenticateJWT, async (req, res) => {
   try {
-    const userRole = req.user?.role;
+    const userRole = (req as any).user?.role;
     
     // root만 메뉴 수정 가능
     if (userRole !== 'root') {
@@ -180,7 +171,7 @@ router.put('/:id', authenticateJWT, async (req, res) => {
 // 메뉴 삭제
 router.delete('/:id', authenticateJWT, async (req, res) => {
   try {
-    const userRole = req.user?.role;
+    const userRole = (req as any).user?.role;
     
     // root만 메뉴 삭제 가능
     if (userRole !== 'root') {
@@ -227,9 +218,9 @@ router.put('/:id/move-up', authenticateJWT, async (req, res) => {
   try {
     console.log('=== 메뉴 위로 이동 API 호출 ===');
     console.log('요청 파라미터:', req.params);
-    console.log('사용자 역할:', req.user?.role);
+    console.log('사용자 역할:', (req as any).user?.role);
     
-    const userRole = req.user?.role;
+    const userRole = (req as any).user?.role;
     
     // root만 메뉴 순서 변경 가능
     if (userRole !== 'root') {
@@ -298,9 +289,9 @@ router.put('/:id/move-down', authenticateJWT, async (req, res) => {
   try {
     console.log('=== 메뉴 아래로 이동 API 호출 ===');
     console.log('요청 파라미터:', req.params);
-    console.log('사용자 역할:', req.user?.role);
+    console.log('사용자 역할:', (req as any).user?.role);
     
-    const userRole = req.user?.role;
+    const userRole = (req as any).user?.role;
     
     // root만 메뉴 순서 변경 가능
     if (userRole !== 'root') {
@@ -367,7 +358,7 @@ router.put('/:id/move-down', authenticateJWT, async (req, res) => {
 // 사용자별 메뉴 권한 조회
 router.get('/permissions/:userId', authenticateJWT, async (req, res) => {
   try {
-    const userRole = req.user?.role;
+    const userRole = (req as any).user?.role;
     
     // admin 또는 root만 접근 가능
     if (userRole !== 'admin' && userRole !== 'root') {
@@ -399,7 +390,7 @@ router.get('/permissions/:userId', authenticateJWT, async (req, res) => {
 // 사용자별 메뉴 권한 부여/수정
 router.post('/permissions/:userId', authenticateJWT, async (req, res) => {
   try {
-    const userRole = req.user?.role;
+    const userRole = (req as any).user?.role;
     
     // admin 또는 root만 접근 가능
     if (userRole !== 'admin' && userRole !== 'root') {
@@ -445,7 +436,7 @@ router.post('/permissions/:userId', authenticateJWT, async (req, res) => {
 // 모든 사용자 목록 조회 (권한 부여용)
 router.get('/users', authenticateJWT, async (req, res) => {
   try {
-    const userRole = req.user?.role;
+    const userRole = (req as any).user?.role;
     
     // admin 또는 root만 접근 가능
     if (userRole !== 'admin' && userRole !== 'root') {
@@ -471,7 +462,7 @@ router.get('/users', authenticateJWT, async (req, res) => {
 // 사용자의 권한에 따른 메뉴 목록 조회 (새로운 권한 시스템 사용)
 router.get('/', authenticateJWT, async (req, res) => {
   try {
-    const userId = req.user?.id;
+    const userId = (req as any).user?.id;
     
     if (!userId) {
       return res.status(401).json({ error: '인증이 필요합니다.' });

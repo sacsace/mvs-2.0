@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: mvs-postgres
+    environment:
+      POSTGRES_DB: mvs_db
+      POSTGRES_USER: mvs_user
+      POSTGRES_PASSWORD: mvs_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - mvs-network
+    restart: unless-stopped
+
+  # MVS Application
+  mvs-app:
+    image: mvs-app:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mvs-app
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://mvs_user:mvs_password@postgres:5432/mvs_db
+      JWT_SECRET: your_jwt_secret_here
+      JWT_REFRESH_SECRET: your_jwt_refresh_secret_here
+
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+    networks:
+      - mvs-network
+    restart: unless-stopped
+    volumes:
+      - ./uploads:/app/uploads
+
+  # Nginx Reverse Proxy (Optional)
+  nginx:
+    image: nginx:alpine
+    container_name: mvs-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - mvs-app
+    networks:
+      - mvs-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  mvs-network:
+    driver: bridge
+

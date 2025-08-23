@@ -159,6 +159,11 @@ interface User {
   };
 }
 
+interface Company {
+  company_id: number;
+  name: string;
+}
+
 interface Menu {
   menu_id: number;
   name: string;
@@ -183,6 +188,7 @@ const MenuPermissionPage: React.FC = () => {
   const { t } = useLanguage();
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [menus, setMenus] = useState<Menu[]>([]);
   const [menuTree, setMenuTree] = useState<any[]>([]);
@@ -193,6 +199,7 @@ const MenuPermissionPage: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<number | ''>('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterCompany, setFilterCompany] = useState<string>('all');
   const [expandedMenus, setExpandedMenus] = useState<Set<number>>(new Set());
   
   // 메뉴 관리 관련 상태
@@ -287,6 +294,26 @@ const MenuPermissionPage: React.FC = () => {
     }
   }, []); // 의존성 배열에서 currentUser 제거
 
+  const fetchCompanies = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/companies', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCompanies(data);
+      } else {
+        console.error('회사 목록 조회 실패:', response.status);
+      }
+    } catch (error) {
+      console.error('회사 목록 조회 오류:', error);
+    }
+  }, []);
+
   const fetchMenus = useCallback(async () => {
     try {
       console.log('=== MenuPermissionPage fetchMenus 시작 ===');
@@ -333,6 +360,7 @@ const MenuPermissionPage: React.FC = () => {
     const initializeData = async () => {
       await fetchCurrentUser();
       fetchMenus();
+      fetchCompanies();
     };
     initializeData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -741,11 +769,15 @@ const MenuPermissionPage: React.FC = () => {
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'admin':
-        return 'error';
+        return 'error';       // 빨간색 - Administrator
       case 'root':
-        return 'warning';
+        return 'warning';     // 주황색 - System Administrator
+      case 'audit':
+        return 'info';        // 파란색 - Auditor
+      case 'user':
+        return 'success';     // 녹색 - User
       default:
-        return 'default';
+        return 'default';     // 회색 - 기타
     }
   };
 
@@ -753,16 +785,30 @@ const MenuPermissionPage: React.FC = () => {
     switch (role) {
       case 'admin':
         return '관리자';
+      case 'audit':
+        return '감사자';
       case 'root':
         return '최고관리자';
+      case 'user':
+        return '일반사용자';
       default:
         return '일반사용자';
     }
   };
 
-  const searchFilteredUsers = filteredUsers.filter(user =>
-    user.username.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // 검색어와 회사 필터를 모두 적용한 사용자 목록
+  const searchFilteredUsers = filteredUsers.filter(user => {
+    const matchesSearch = user.username.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCompany = filterCompany === 'all' || user.company_id.toString() === filterCompany;
+    return matchesSearch && matchesCompany;
+  });
+
+  // 회사 필터 변경 핸들러
+  const handleCompanyFilterChange = (event: any) => {
+    setFilterCompany(event.target.value as string);
+    // 회사가 변경되면 선택된 사용자 초기화
+    setSelectedUser('');
+  };
 
   const getMenuLevel = (menu: Menu) => {
     if (!menu.parent_id) return 0;
@@ -1274,7 +1320,31 @@ const MenuPermissionPage: React.FC = () => {
             sx={{ minWidth: 200 }}
           />
           
-          <FormControl size="small" sx={{ minWidth: 250 }}>
+          <FormControl size="small" sx={{ minWidth: 180 }}>
+            <InputLabel>{t('company')}</InputLabel>
+            <Select
+              value={filterCompany}
+              label={t('company')}
+              onChange={handleCompanyFilterChange}
+            >
+              <MenuItem value="all">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <BusinessIcon sx={{ fontSize: 16, color: '#1976d2' }} />
+                  <span>{t('all')}</span>
+                </Box>
+              </MenuItem>
+              {companies.map(company => (
+                <MenuItem key={company.company_id} value={company.company_id.toString()}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <BusinessIcon sx={{ fontSize: 16, color: '#4caf50' }} />
+                    <span>{company.name}</span>
+                  </Box>
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          
+          <FormControl size="small" sx={{ minWidth: 280 }}>
             <InputLabel>사용자 선택</InputLabel>
             <Select
               value={selectedUser}
@@ -1288,9 +1358,6 @@ const MenuPermissionPage: React.FC = () => {
                 <MenuItem key={user.id} value={user.id}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <span>사용자명: {user.username}</span>
-                    <span style={{ color: '#666', fontSize: '0.875rem' }}>
-                      (ID: {user.id})
-                    </span>
                     <Chip
                       label={getRoleLabel(user.role)}
                       color={getRoleColor(user.role) as any}

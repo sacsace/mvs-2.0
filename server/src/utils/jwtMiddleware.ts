@@ -13,8 +13,10 @@ export function authenticateJWT(req: Request, res: Response, next: NextFunction)
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, config.jwt.secret) as JwtPayload;
-    req.user = {
+    // any 타입으로 안전하게 처리
+    (req as any).user = {
       id: decoded.id,
+      userid: decoded.userid || decoded.username || `user_${decoded.id}`,
       username: decoded.username,
       company_id: decoded.company_id,
       role: decoded.role,

@@ -38,6 +38,7 @@
     "pg": "^8.10.0",
     "pg-hstore": "^2.3.4",
     "sequelize": "^6.31.0",
+    "web-push": "^3.6.7",
     "winston": "^3.17.0"
   },
   "devDependencies": {
@@ -48,6 +49,7 @@
     "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^18.15.11",
     "@types/pg": "^8.6.6",
+    "@types/web-push": "^3.6.4",
     "nodemon": "^2.0.22",
     "sequelize-cli": "^6.6.3",
     "ts-node": "^10.9.1",

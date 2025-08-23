@@ -16,6 +16,11 @@ import invoiceRouter from './routes/invoice';
 import partnerRouter from './routes/partners';
 import dashboardRouter from './routes/dashboard';
 import einvoiceRouter from './routes/einvoice';
+import pushRouter from './routes/push';
+import worksRouter from './routes/works';
+import payrollRouter from './routes/payroll';
+import noticeRouter from './routes/notice';
+import expensesRouter from './routes/expenses';
 import logger from './utils/logger';
 
 // 프로세스 에러 핸들링
@@ -32,13 +37,15 @@ process.on('unhandledRejection', (reason, promise) => {
 const app = express();
 
 // CORS 설정
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'];
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://192.168.1.202:3000'],
+  origin: allowedOrigins,
   credentials: true
 }));
 
-// JSON 파싱 미들웨어
-app.use(express.json());
+// JSON 파싱 미들웨어 (사진 업로드를 위해 제한 늘림)
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // 정적 파일 서빙 (업로드된 파일들)
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
@@ -71,6 +78,11 @@ app.use('/api/invoice', invoiceRouter);
 app.use('/api/partners', partnerRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/e-invoice', einvoiceRouter);
+app.use('/api/push', pushRouter);
+app.use('/api/works', worksRouter);
+app.use('/api/payroll', payrollRouter);
+app.use('/api/notice', noticeRouter);
+app.use('/api/expenses', expensesRouter);
 
 // Railway 헬스체크 대응 - 추가 엔드포인트
 app.get('/', (req, res) => {
@@ -123,17 +135,18 @@ logger.info(`Database URL exists: ${!!process.env.DATABASE_URL}`);
 
 // Railway 헬스체크 대응
 const server = app.listen(PORT, '0.0.0.0', async () => {
+  const serverHost = process.env.SERVER_HOST || 'localhost';
   logger.info(`✅ Server is running on port ${PORT}`);
-  logger.info(`✅ Health check available at: http://localhost:${PORT}/api/init/health`);
-  logger.info(`🚀 Railway deployment successful at ${new Date().toISOString()}`);
+  logger.info(`✅ Health check available at: http://${serverHost}:${PORT}/api/init/health`);
+  logger.info(`🚀 Server deployment successful at ${new Date().toISOString()}`);
   
   try {
     // 데이터베이스 연결 확인
     await sequelize.authenticate();
     logger.info('✅ Database connection established');
     
-    // 프로덕션 환경에서 테이블 동기화
-    if (process.env.NODE_ENV === 'production') {
+    // 개발 및 프로덕션 환경에서 테이블 동기화
+    if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'production') {
       await sequelize.sync({ alter: false });
       logger.info('✅ Database tables synchronized');
     }

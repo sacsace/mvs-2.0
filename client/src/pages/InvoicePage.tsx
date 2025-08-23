@@ -44,7 +44,9 @@ import {
   Description as DescriptionIcon,
   ReceiptLong as ReceiptLongIcon,
   PictureAsPdf as PdfIcon,
-  Print as PrintIcon
+  Print as PrintIcon,
+  ArrowUpward,
+  ArrowDownward
 } from '@mui/icons-material';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useMenuPermission } from '../hooks/useMenuPermission';
@@ -119,6 +121,10 @@ const InvoicePage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterType, setFilterType] = useState<string>('all');
+  
+  // 정렬 상태 관리
+  const [sortField, setSortField] = useState<string>('');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   
   // 탭 상태
   const [activeTab, setActiveTab] = useState(0);
@@ -876,6 +882,28 @@ const InvoicePage: React.FC = () => {
     }
   };
 
+  // 정렬 핸들러
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      // 같은 필드를 클릭한 경우 방향 토글
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // 다른 필드를 클릭한 경우 해당 필드로 오름차순 설정
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // 정렬 아이콘 렌더링
+  const renderSortIcon = (field: string) => {
+    if (sortField !== field) {
+      return null;
+    }
+    return sortDirection === 'asc' ? 
+      <ArrowUpward sx={{ fontSize: 14, ml: 0.5 }} /> : 
+      <ArrowDownward sx={{ fontSize: 14, ml: 0.5 }} />;
+  };
+
   // 필터링된 인보이스 목록
   const filteredInvoices = invoices.filter(invoice => {
     const matchesSearch = invoice.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -886,7 +914,56 @@ const InvoicePage: React.FC = () => {
     return matchesSearch && matchesStatus && matchesType;
   });
 
-  const paginatedInvoices = filteredInvoices.slice(
+  // 정렬된 인보이스 목록
+  const sortedInvoices = [...filteredInvoices].sort((a, b) => {
+    if (!sortField) return 0;
+
+    let aValue: any = '';
+    let bValue: any = '';
+
+    switch (sortField) {
+      case 'invoice_number':
+        aValue = a.invoice_number?.toLowerCase() || '';
+        bValue = b.invoice_number?.toLowerCase() || '';
+        break;
+      case 'invoice_type':
+        aValue = a.invoice_type || '';
+        bValue = b.invoice_type || '';
+        break;
+      case 'customer':
+        aValue = a.partnerCompany?.name?.toLowerCase() || '';
+        bValue = b.partnerCompany?.name?.toLowerCase() || '';
+        break;
+      case 'amount':
+        aValue = a.total_amount || 0;
+        bValue = b.total_amount || 0;
+        break;
+      case 'status':
+        aValue = a.status || '';
+        bValue = b.status || '';
+        break;
+      case 'issue_date':
+        aValue = new Date(a.invoice_date || 0);
+        bValue = new Date(b.invoice_date || 0);
+        break;
+      case 'due_date':
+        aValue = new Date(a.due_date || 0);
+        bValue = new Date(b.due_date || 0);
+        break;
+      default:
+        return 0;
+    }
+
+    if (aValue < bValue) {
+      return sortDirection === 'asc' ? -1 : 1;
+    }
+    if (aValue > bValue) {
+      return sortDirection === 'asc' ? 1 : -1;
+    }
+    return 0;
+  });
+
+  const paginatedInvoices = sortedInvoices.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
@@ -1887,13 +1964,139 @@ const InvoicePage: React.FC = () => {
             <Table size="small">
               <TableHead>
                 <TableRow sx={{ border: 0, background: '#f7fafd' }}>
-                  <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>Invoice No.</TableCell>
-                  <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>Type</TableCell>
-                  <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>Customer</TableCell>
-                  <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>Amount</TableCell>
-                  <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>Status</TableCell>
-                  <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>Issue Date</TableCell>
-                  <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>Due Date</TableCell>
+                  <TableCell 
+                    sx={{ 
+                      border: 0, 
+                      fontWeight: 700, 
+                      fontSize: '0.8rem', 
+                      background: 'none', 
+                      py: 0.7, 
+                      color: '#222',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      '&:hover': { backgroundColor: '#e9f4ff' }
+                    }}
+                    onClick={() => handleSort('invoice_number')}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      Invoice No.
+                      {renderSortIcon('invoice_number')}
+                    </Box>
+                  </TableCell>
+                  <TableCell 
+                    sx={{ 
+                      border: 0, 
+                      fontWeight: 700, 
+                      fontSize: '0.8rem', 
+                      background: 'none', 
+                      py: 0.7, 
+                      color: '#222',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      '&:hover': { backgroundColor: '#e9f4ff' }
+                    }}
+                    onClick={() => handleSort('invoice_type')}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      Type
+                      {renderSortIcon('invoice_type')}
+                    </Box>
+                  </TableCell>
+                  <TableCell 
+                    sx={{ 
+                      border: 0, 
+                      fontWeight: 700, 
+                      fontSize: '0.8rem', 
+                      background: 'none', 
+                      py: 0.7, 
+                      color: '#222',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      '&:hover': { backgroundColor: '#e9f4ff' }
+                    }}
+                    onClick={() => handleSort('customer')}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      Customer
+                      {renderSortIcon('customer')}
+                    </Box>
+                  </TableCell>
+                  <TableCell 
+                    sx={{ 
+                      border: 0, 
+                      fontWeight: 700, 
+                      fontSize: '0.8rem', 
+                      background: 'none', 
+                      py: 0.7, 
+                      color: '#222',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      '&:hover': { backgroundColor: '#e9f4ff' }
+                    }}
+                    onClick={() => handleSort('amount')}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      Amount
+                      {renderSortIcon('amount')}
+                    </Box>
+                  </TableCell>
+                  <TableCell 
+                    sx={{ 
+                      border: 0, 
+                      fontWeight: 700, 
+                      fontSize: '0.8rem', 
+                      background: 'none', 
+                      py: 0.7, 
+                      color: '#222',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      '&:hover': { backgroundColor: '#e9f4ff' }
+                    }}
+                    onClick={() => handleSort('status')}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      Status
+                      {renderSortIcon('status')}
+                    </Box>
+                  </TableCell>
+                  <TableCell 
+                    sx={{ 
+                      border: 0, 
+                      fontWeight: 700, 
+                      fontSize: '0.8rem', 
+                      background: 'none', 
+                      py: 0.7, 
+                      color: '#222',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      '&:hover': { backgroundColor: '#e9f4ff' }
+                    }}
+                    onClick={() => handleSort('issue_date')}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      Issue Date
+                      {renderSortIcon('issue_date')}
+                    </Box>
+                  </TableCell>
+                  <TableCell 
+                    sx={{ 
+                      border: 0, 
+                      fontWeight: 700, 
+                      fontSize: '0.8rem', 
+                      background: 'none', 
+                      py: 0.7, 
+                      color: '#222',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      '&:hover': { backgroundColor: '#e9f4ff' }
+                    }}
+                    onClick={() => handleSort('due_date')}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      Due Date
+                      {renderSortIcon('due_date')}
+                    </Box>
+                  </TableCell>
                   <TableCell sx={{ border: 0, fontWeight: 700, fontSize: '0.8rem', background: 'none', py: 0.7, color: '#222' }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
@@ -1995,7 +2198,7 @@ const InvoicePage: React.FC = () => {
              <TablePagination
                rowsPerPageOptions={[5, 10, 25]}
                component="div"
-               count={filteredInvoices.length}
+               count={sortedInvoices.length}
                rowsPerPage={rowsPerPage}
                page={page}
                onPageChange={handleChangePage}

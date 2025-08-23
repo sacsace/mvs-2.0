@@ -14,6 +14,15 @@ class User extends Model {
   public create_date!: Date;
   public update_date!: Date;
   public last_notification_check?: Date;
+  
+  // 확장된 프로필 필드들
+  public profile?: any;
+  public employment?: any;
+  public performance?: any;
+  public education?: any;
+  public skills?: any;
+  public attendance?: any;
+  public compensation?: any;
 
   public async comparePassword(candidatePassword: string): Promise<boolean> {
     return bcrypt.compare(candidatePassword, this.password);
@@ -67,6 +76,35 @@ User.init(
     },
     last_notification_check: {
       type: DataTypes.DATE,
+      allowNull: true,
+    },
+    // 확장된 프로필 필드들
+    profile: {
+      type: DataTypes.JSON,
+      allowNull: true,
+    },
+    employment: {
+      type: DataTypes.JSON,
+      allowNull: true,
+    },
+    performance: {
+      type: DataTypes.JSON,
+      allowNull: true,
+    },
+    education: {
+      type: DataTypes.JSON,
+      allowNull: true,
+    },
+    skills: {
+      type: DataTypes.JSON,
+      allowNull: true,
+    },
+    attendance: {
+      type: DataTypes.JSON,
+      allowNull: true,
+    },
+    compensation: {
+      type: DataTypes.JSON,
       allowNull: true,
     },
   },

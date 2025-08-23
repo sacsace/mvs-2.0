@@ -12,11 +12,11 @@ const router = Router();
 router.get('/stats', authenticateJWT, async (req, res) => {
   try {
     console.log('대시보드 통계 API 호출됨');
-    console.log('사용자 정보:', req.user);
+    console.log('사용자 정보:', (req as any).user);
 
-    const userId = req.user?.id;
-    const userRole = req.user?.role;
-    const companyId = req.user?.company_id;
+    const userId = (req as any).user?.id;
+    const userRole = (req as any).user?.role;
+    const companyId = (req as any).user?.company_id;
 
     if (!userId) {
       return res.status(401).json({ error: '인증이 필요합니다.' });
@@ -107,7 +107,7 @@ router.get('/stats', authenticateJWT, async (req, res) => {
         type: 'login',
         message: '새로운 사용자가 로그인했습니다',
         timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(), // 5분 전
-        user: req.user?.username || 'admin'
+        user: (req as any).user?.username || 'admin'
       },
       {
         id: 2,
@@ -163,7 +163,7 @@ router.get('/stats', authenticateJWT, async (req, res) => {
 // 사용자 정보 조회 (현재 로그인한 사용자)
 router.get('/me', authenticateJWT, async (req, res) => {
   try {
-    const userId = req.user?.id;
+    const userId = (req as any).user?.id;
     
     if (!userId) {
       return res.status(401).json({ error: '인증이 필요합니다.' });
@@ -201,7 +201,7 @@ router.get('/me', authenticateJWT, async (req, res) => {
 // 시스템 성능 정보 조회
 router.get('/performance', authenticateJWT, async (req, res) => {
   try {
-    const userRole = req.user?.role;
+    const userRole = (req as any).user?.role;
     
     // 관리자만 시스템 성능 정보 조회 가능
     if (userRole !== 'admin' && userRole !== 'root') {

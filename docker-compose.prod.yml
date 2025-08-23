@@ -1,0 +1,73 @@
+# MVS 2.0 프로덕션 Docker Compose (Docker Hub 이미지 사용)
+version: '3.8'
+
+services:
+  # PostgreSQL 데이터베이스
+  database:
+    image: postgres:17-alpine
+    container_name: mvs_postgres_prod
+    environment:
+      POSTGRES_DB: mvs
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    networks:
+      - mvs_network
+    restart: unless-stopped
+
+  # Backend 서버 (Docker Hub 이미지)
+  backend:
+    image: minsublee/mvs-backend:latest  # Docker Hub 이미지 사용
+    container_name: mvs_backend_prod
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:${DB_PASSWORD}@database:5432/mvs
+      - JWT_SECRET=${JWT_SECRET}
+      - PORT=3001
+    ports:
+      - "3001:3001"
+    depends_on:
+      - database
+    volumes:
+      - ./uploads:/app/uploads
+    networks:
+      - mvs_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # Frontend 서버 (Docker Hub 이미지)
+  frontend:
+    image: minsublee/mvs-frontend:latest  # Docker Hub 이미지 사용
+    container_name: mvs_frontend_prod
+    environment:
+      - REACT_APP_API_URL=${API_URL}
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - mvs_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+
+volumes:
+  postgres_data_prod:
+
+networks:
+  mvs_network:
+    driver: bridge
+
+

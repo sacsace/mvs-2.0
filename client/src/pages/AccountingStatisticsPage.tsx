@@ -27,9 +27,15 @@ import {
   TrendingDown,
   AccountBalance,
   CalendarToday,
-  FilterList
+  FilterList,
+  PieChart as PieChartIcon
 } from '@mui/icons-material';
 import axios from 'axios';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
+import { Pie, Doughnut, Bar } from 'react-chartjs-2';
+
+// Chart.js 등록
+ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
 
 interface StatisticsData {
   period: {
@@ -135,12 +141,26 @@ const AccountingStatisticsPage: React.FC = () => {
       setCurrentUser(JSON.parse(user));
     }
     
-    // 기본 날짜 설정 (올해 1월 1일 ~ 오늘)
+    // 기본 날짜 설정 (인도 회계 년도: 4월 1일 ~ 다음해 3월 31일)
     const today = new Date();
-    const startOfYear = new Date(today.getFullYear(), 0, 1);
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth() + 1; // 1-12월
     
-    setStartDate(startOfYear.toISOString().split('T')[0]);
-    setEndDate(today.toISOString().split('T')[0]);
+    let fiscalYearStart: Date;
+    let fiscalYearEnd: Date;
+    
+    if (currentMonth >= 4) {
+      // 4월 이후: 올해 4월 1일 ~ 내년 3월 31일
+      fiscalYearStart = new Date(currentYear, 3, 1); // 4월 1일 (월은 0부터 시작)
+      fiscalYearEnd = new Date(currentYear + 1, 2, 31); // 3월 31일
+    } else {
+      // 1-3월: 작년 4월 1일 ~ 올해 3월 31일
+      fiscalYearStart = new Date(currentYear - 1, 3, 1); // 작년 4월 1일
+      fiscalYearEnd = new Date(currentYear, 2, 31); // 올해 3월 31일
+    }
+    
+    setStartDate(fiscalYearStart.toISOString().split('T')[0]);
+    setEndDate(fiscalYearEnd.toISOString().split('T')[0]);
   }, []);
 
   useEffect(() => {
@@ -151,6 +171,87 @@ const AccountingStatisticsPage: React.FC = () => {
 
   const formatCurrency = (amount: number) => {
     return `₹${amount.toLocaleString('en-IN')}`;
+  };
+
+  // 차트 데이터 준비 함수들
+  const preparePieChartData = () => {
+    if (!data) return null;
+    
+    return {
+      labels: ['매입', '매출'],
+      datasets: [
+        {
+          data: [data.summary.purchase.total_amount, data.summary.sale.total_amount],
+          backgroundColor: [
+            'rgba(255, 99, 132, 0.8)',
+            'rgba(54, 162, 235, 0.8)'
+          ],
+          borderColor: [
+            'rgba(255, 99, 132, 1)',
+            'rgba(54, 162, 235, 1)'
+          ],
+          borderWidth: 2,
+        },
+      ],
+    };
+  };
+
+  const prepareStatusChartData = () => {
+    if (!data || !data.status.length) return null;
+    
+    const colors = [
+      'rgba(255, 99, 132, 0.8)',
+      'rgba(54, 162, 235, 0.8)',
+      'rgba(255, 205, 86, 0.8)',
+      'rgba(75, 192, 192, 0.8)',
+      'rgba(153, 102, 255, 0.8)'
+    ];
+    
+    return {
+      labels: data.status.map(item => item.status),
+      datasets: [
+        {
+          data: data.status.map(item => item.total_amount),
+          backgroundColor: colors.slice(0, data.status.length),
+          borderColor: colors.slice(0, data.status.length).map(color => color.replace('0.8', '1')),
+          borderWidth: 2,
+        },
+      ],
+    };
+  };
+
+  const prepareMonthlyBarChartData = () => {
+    if (!data || !data.monthly.length) return null;
+    
+    const months = Array.from(new Set(data.monthly.map(item => item.month))).sort();
+    const purchaseData = months.map(month => {
+      const item = data.monthly.find(m => m.month === month && m.transaction_type === 'purchase');
+      return item ? item.total_amount : 0;
+    });
+    const saleData = months.map(month => {
+      const item = data.monthly.find(m => m.month === month && m.transaction_type === 'sale');
+      return item ? item.total_amount : 0;
+    });
+    
+    return {
+      labels: months,
+      datasets: [
+        {
+          label: '매입',
+          data: purchaseData,
+          backgroundColor: 'rgba(255, 99, 132, 0.8)',
+          borderColor: 'rgba(255, 99, 132, 1)',
+          borderWidth: 1,
+        },
+        {
+          label: '매출',
+          data: saleData,
+          backgroundColor: 'rgba(54, 162, 235, 0.8)',
+          borderColor: 'rgba(54, 162, 235, 1)',
+          borderWidth: 1,
+        },
+      ],
+    };
   };
 
   const getStatusColor = (status: string) => {
@@ -344,10 +445,168 @@ const AccountingStatisticsPage: React.FC = () => {
                 {data.period.start} ~ {data.period.end}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                조회 기간
+                인도 회계 년도
               </Typography>
             </CardContent>
           </Card>
+        </Grid>
+      </Grid>
+
+      {/* 차트 섹션 */}
+      <Grid container spacing={3} mb={3}>
+        {/* 매입/매출 비율 원형 차트 */}
+        <Grid item xs={12} md={4}>
+          <Paper sx={{ p: 2, height: 300 }}>
+            <Box display="flex" alignItems="center" mb={2}>
+              <PieChartIcon color="primary" sx={{ mr: 1 }} />
+              <Typography variant="h6" sx={{ fontSize: '0.85rem', fontWeight: 700 }}>
+                매입/매출 비율
+              </Typography>
+            </Box>
+            {preparePieChartData() ? (
+              <Box display="flex" justifyContent="center" alignItems="center" height="calc(100% - 60px)">
+                <Pie 
+                  data={preparePieChartData()!}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        position: 'bottom',
+                        labels: {
+                          font: { size: 12 },
+                          padding: 15
+                        }
+                      },
+                      tooltip: {
+                        callbacks: {
+                          label: function(context) {
+                            const label = context.label || '';
+                            const value = context.parsed;
+                            const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return `${label}: ${formatCurrency(value)} (${percentage}%)`;
+                          }
+                        }
+                      }
+                    }
+                  }}
+                />
+              </Box>
+            ) : (
+              <Box display="flex" justifyContent="center" alignItems="center" height="calc(100% - 60px)">
+                <Typography color="text.secondary">데이터가 없습니다</Typography>
+              </Box>
+            )}
+          </Paper>
+        </Grid>
+
+        {/* 상태별 금액 도넛 차트 */}
+        <Grid item xs={12} md={4}>
+          <Paper sx={{ p: 2, height: 300 }}>
+            <Box display="flex" alignItems="center" mb={2}>
+              <PieChartIcon color="secondary" sx={{ mr: 1 }} />
+              <Typography variant="h6" sx={{ fontSize: '0.85rem', fontWeight: 700 }}>
+                상태별 금액
+              </Typography>
+            </Box>
+            {prepareStatusChartData() ? (
+              <Box display="flex" justifyContent="center" alignItems="center" height="calc(100% - 60px)">
+                <Doughnut 
+                  data={prepareStatusChartData()!}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        position: 'bottom',
+                        labels: {
+                          font: { size: 12 },
+                          padding: 15
+                        }
+                      },
+                      tooltip: {
+                        callbacks: {
+                          label: function(context) {
+                            const label = context.label || '';
+                            const value = context.parsed;
+                            const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return `${label}: ${formatCurrency(value)} (${percentage}%)`;
+                          }
+                        }
+                      }
+                    }
+                  }}
+                />
+              </Box>
+            ) : (
+              <Box display="flex" justifyContent="center" alignItems="center" height="calc(100% - 60px)">
+                <Typography color="text.secondary">데이터가 없습니다</Typography>
+              </Box>
+            )}
+          </Paper>
+        </Grid>
+
+        {/* 월별 매입/매출 막대 차트 */}
+        <Grid item xs={12} md={4}>
+          <Paper sx={{ p: 2, height: 300 }}>
+            <Box display="flex" alignItems="center" mb={2}>
+              <TrendingUp color="info" sx={{ mr: 1 }} />
+              <Typography variant="h6" sx={{ fontSize: '0.85rem', fontWeight: 700 }}>
+                월별 추이
+              </Typography>
+            </Box>
+            {prepareMonthlyBarChartData() ? (
+              <Box display="flex" justifyContent="center" alignItems="center" height="calc(100% - 60px)">
+                <Bar 
+                  data={prepareMonthlyBarChartData()!}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        position: 'top',
+                        labels: {
+                          font: { size: 12 },
+                          padding: 15
+                        }
+                      },
+                      tooltip: {
+                        callbacks: {
+                          label: function(context) {
+                            const label = context.dataset.label || '';
+                            const value = context.parsed.y;
+                            return `${label}: ${formatCurrency(value)}`;
+                          }
+                        }
+                      }
+                    },
+                    scales: {
+                      y: {
+                        beginAtZero: true,
+                        ticks: {
+                          font: { size: 11 },
+                          callback: function(value) {
+                            return formatCurrency(value as number);
+                          }
+                        }
+                      },
+                      x: {
+                        ticks: {
+                          font: { size: 11 }
+                        }
+                      }
+                    }
+                  }}
+                />
+              </Box>
+            ) : (
+              <Box display="flex" justifyContent="center" alignItems="center" height="calc(100% - 60px)">
+                <Typography color="text.secondary">데이터가 없습니다</Typography>
+              </Box>
+            )}
+          </Paper>
         </Grid>
       </Grid>
 

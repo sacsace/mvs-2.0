@@ -12,6 +12,10 @@ import ApprovalFile from './ApprovalFile';
 import ApprovalComment from './ApprovalComment';
 import Transaction from './Transaction';
 import Invoice from './Invoice';
+import Payroll from './Payroll';
+import Notice from './Notice';
+import Expense from './Expense';
+import ExpenseItem from './ExpenseItem';
 
 // User - Company 관계
 User.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
@@ -85,10 +89,47 @@ Company.hasMany(Invoice, { foreignKey: 'partner_company_id', as: 'partnerInvoice
 Invoice.belongsTo(User, { foreignKey: 'created_by', as: 'creator' });
 User.hasMany(Invoice, { foreignKey: 'created_by', as: 'createdInvoices' });
 
+// Payroll 관련 관계
+Payroll.belongsTo(User, { foreignKey: 'user_id', as: 'User' });
+User.hasMany(Payroll, { foreignKey: 'user_id', as: 'payrolls' });
+Payroll.belongsTo(User, { foreignKey: 'created_by', as: 'Creator' });
+User.hasMany(Payroll, { foreignKey: 'created_by', as: 'createdPayrolls' });
+Payroll.belongsTo(User, { foreignKey: 'updated_by', as: 'Updater' });
+User.hasMany(Payroll, { foreignKey: 'updated_by', as: 'updatedPayrolls' });
+
+// Notice 관련 관계
+Notice.belongsTo(Company, { foreignKey: 'company_id', as: 'Company' });
+Company.hasMany(Notice, { foreignKey: 'company_id', as: 'notices' });
+Notice.belongsTo(User, { foreignKey: 'author_id', as: 'Author' });
+User.hasMany(Notice, { foreignKey: 'author_id', as: 'authoredNotices' });
+Notice.belongsTo(User, { foreignKey: 'created_by', as: 'Creator' });
+User.hasMany(Notice, { foreignKey: 'created_by', as: 'createdNotices' });
+Notice.belongsTo(User, { foreignKey: 'updated_by', as: 'Updater' });
+User.hasMany(Notice, { foreignKey: 'updated_by', as: 'updatedNotices' });
+
+// Expense 관련 관계
+Expense.belongsTo(Company, { foreignKey: 'company_id', as: 'company', targetKey: 'id' });
+Company.hasMany(Expense, { foreignKey: 'company_id', as: 'expenses', sourceKey: 'id' });
+Expense.belongsTo(User, { foreignKey: 'requester_id', as: 'Requester' });
+User.hasMany(Expense, { foreignKey: 'requester_id', as: 'requestedExpenses' });
+Expense.belongsTo(User, { foreignKey: 'approver_id', as: 'Approver' });
+User.hasMany(Expense, { foreignKey: 'approver_id', as: 'approvingExpenses' });
+Expense.belongsTo(User, { foreignKey: 'created_by', as: 'Creator' });
+User.hasMany(Expense, { foreignKey: 'created_by', as: 'createdExpenses' });
+Expense.belongsTo(User, { foreignKey: 'updated_by', as: 'Updater' });
+User.hasMany(Expense, { foreignKey: 'updated_by', as: 'updatedExpenses' });
+
+// ExpenseItem 관련 관계
+Expense.hasMany(ExpenseItem, { foreignKey: 'expense_id', as: 'Items' });
+ExpenseItem.belongsTo(Expense, { foreignKey: 'expense_id', as: 'Expense' });
+
 export {
   User,
   Company,
   Menu,
+  Notice,
+  Expense,
+  ExpenseItem,
   MenuPermission,
   Permission,
   Role,
@@ -98,5 +139,6 @@ export {
   ApprovalFile,
   ApprovalComment,
   Transaction,
-  Invoice
+  Invoice,
+  Payroll
 }; 

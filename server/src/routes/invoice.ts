@@ -8,25 +8,13 @@ import logger from '../utils/logger';
 
 const router = express.Router();
 
-// JWT 인증을 위한 Request 인터페이스 확장
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id?: number;
-        username?: string;
-        company_id?: number;
-        role?: string;
-      };
-    }
-  }
-}
+// Request 인터페이스는 jwtMiddleware.ts에서 확장됨
 
 // 인보이스 목록 조회
 router.get('/', authenticateJWT, async (req, res) => {
   try {
-    const userRole = req.user?.role;
-    const userCompanyId = req.user?.company_id;
+    const userRole = (req as any).user?.role;
+    const userCompanyId = (req as any).user?.company_id;
     
     let whereCondition: any = {};
     
@@ -68,8 +56,8 @@ router.get('/', authenticateJWT, async (req, res) => {
 router.get('/:id', authenticateJWT, async (req, res) => {
   try {
     const { id } = req.params;
-    const userRole = req.user?.role;
-    const userCompanyId = req.user?.company_id;
+    const userRole = (req as any).user?.role;
+    const userCompanyId = (req as any).user?.company_id;
     
     const invoice = await Invoice.findByPk(id, {
       include: [
@@ -110,9 +98,9 @@ router.get('/:id', authenticateJWT, async (req, res) => {
 // 인보이스 생성
 router.post('/', authenticateJWT, async (req, res) => {
   try {
-    const userRole = req.user?.role;
-    const userCompanyId = req.user?.company_id;
-    const userId = req.user?.id;
+    const userRole = (req as any).user?.role;
+    const userCompanyId = (req as any).user?.company_id;
+    const userId = (req as any).user?.id;
     
     // 사용자 정보 검증
     if (!userCompanyId || !userId) {
@@ -185,8 +173,8 @@ router.post('/', authenticateJWT, async (req, res) => {
 router.put('/:id', authenticateJWT, async (req, res) => {
   try {
     const { id } = req.params;
-    const userRole = req.user?.role;
-    const userCompanyId = req.user?.company_id;
+    const userRole = (req as any).user?.role;
+    const userCompanyId = (req as any).user?.company_id;
     
     const invoice = await Invoice.findByPk(id);
     if (!invoice) {
@@ -251,8 +239,8 @@ router.put('/:id', authenticateJWT, async (req, res) => {
 router.delete('/:id', authenticateJWT, async (req, res) => {
   try {
     const { id } = req.params;
-    const userRole = req.user?.role;
-    const userCompanyId = req.user?.company_id;
+    const userRole = (req as any).user?.role;
+    const userCompanyId = (req as any).user?.company_id;
     
     const invoice = await Invoice.findByPk(id);
     if (!invoice) {
@@ -280,7 +268,7 @@ router.delete('/:id', authenticateJWT, async (req, res) => {
 router.get('/generate-number/:type', authenticateJWT, async (req, res) => {
   try {
     const { type } = req.params;
-    const userCompanyId = req.user?.company_id;
+    const userCompanyId = (req as any).user?.company_id;
     
     const today = new Date();
     const year = today.getFullYear();

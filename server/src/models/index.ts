@@ -14,6 +14,7 @@ import MenuPermission from './MenuPermission';
 import Approval from './Approval';
 import ApprovalFile from './ApprovalFile';
 import Transaction from './Transaction';
+import PushSubscription from './PushSubscription';
 
 const sequelize = new Sequelize(
   config.db.name,
@@ -43,6 +44,7 @@ interface DbModels {
   Approval: typeof Approval;
   ApprovalFile: typeof ApprovalFile;
   Transaction: typeof Transaction;
+  PushSubscription: typeof PushSubscription;
   [key: string]: any;
 }
 
@@ -61,7 +63,8 @@ const db: DbModels = {
   // UserPermission,
   Approval,
   ApprovalFile,
-  Transaction
+  Transaction,
+  PushSubscription
 };
 
 // 모델 간의 관계 설정
@@ -83,5 +86,6 @@ export {
   // UserPermission,
   Approval,
   ApprovalFile,
-  Transaction
+  Transaction,
+  PushSubscription
 }; 
